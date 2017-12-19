@@ -16,13 +16,13 @@ class GitHubFactory:
     # def getRepoClient(self, account, reponame):
     #     return GitHubRepoClient(account, reponame)
 
-    def getClient(self, login_or_token, password=None):
+    def get(self, login_or_token, password=None):
         if login_or_token not in self._clients:
             self._clients[login_or_token] = GitHubClient(
                 login_or_token, password)
         return self._clients[login_or_token]
 
-    def getIssueClass(self):
+    def issue_get(self):
         # return Issue
         return Issue
 
@@ -45,7 +45,7 @@ class GitHubClient:
     #         self.repos[fullname] = r
     #     return self.repos[fullname]
 
-    def getUserLogin(self, githubObj):
+    def user_login_get(self, githubObj):
         if githubObj is None:
             return ""
         if githubObj.login not in self.users:
@@ -53,7 +53,7 @@ class GitHubClient:
             self.users[githubObj.login] = user
         return self.users[githubObj.login].login
 
-    def getUser(self, login="", githubObj=None):
+    def user_get(self, login="", githubObj=None):
         if login in self.users:
             return self.users[login]
 
@@ -63,13 +63,13 @@ class GitHubClient:
                 self.users[githubObj.login] = user
             return self.users[githubObj.login]
 
-    def getOrganizations(self):
+    def organizations_get(self):
         """
         gets all organization for an authorized user
         """
         return self.api.get_user().get_orgs()
 
-    def getRepos(self, organizationId=None):
+    def repos_get(self, organizationId=None):
         """
         gets all repos for a user if organizationId=None otherwise it return only repos for this organization
 
@@ -88,7 +88,7 @@ class GitHubClient:
                     return org.get_repos()
             raise RuntimeError("Cannot find Organization with id :%s" % organizationId)
 
-    def getRepo(self, repoName):
+    def repo_get(self, repoName):
         """
         gets a specific repo by name
 
@@ -97,7 +97,7 @@ class GitHubClient:
         """
         return self.api.get_user().get_repo(repoName)
 
-    def createRepo(self, name, description=NotSet, homepage=NotSet, private=NotSet, has_issues=NotSet, has_wiki=NotSet,
+    def repo_create(self, name, description=NotSet, homepage=NotSet, private=NotSet, has_issues=NotSet, has_wiki=NotSet,
                     has_downloads=NotSet, auto_init=NotSet, gitignore_template=NotSet):
         """
         creates a repo
@@ -117,7 +117,7 @@ class GitHubClient:
         return self.api.get_user().create_repo(name, description=description, homepage=homepage, private=private, has_issues=has_issues,
                     has_wiki=has_wiki, has_downloads=has_downloads, auto_init=auto_init, gitignore_template=gitignore_template)
 
-    def deleteRepo(self, repo):
+    def repo_delete(self, repo):
         """
         deletes a repo
 
@@ -130,4 +130,4 @@ class GitHubClient:
         if isinstance(repo, github.Repository.Repository):
             repo.delete()
         else:
-            raise RuntimeError("invalid Repository")
+            raise RuntimeError("invalid Repository")  
