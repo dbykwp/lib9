@@ -773,6 +773,13 @@ class Machine:
         self.id = self.model["id"]
         self.name = self.model["name"]
         self.ssh_keypath = None
+        self._logger = None
+
+    @property
+    def logger(self):
+        if self._logger is None:
+            self._logger = j.logger.get("OVC Client Factory")
+        return self._logger
 
     def start(self):
         self.client.api.cloudapi.machines.start(machineId=self.id)
@@ -932,6 +939,11 @@ class Machine:
             # - if it's an auto-generated port, we probably hit a concurrence issue
             #   let's try again with a new port
             if str(e).startswith("409 Conflict") and publicport is None:
+                return self.portforward_create(None, localport, protocol)
+            # check if the cloudspace is still deploying
+            if str(e) == '400 Bad Request\nCannot create a portforwarding during cloudspace deployment.':
+                self.logger.info("Cloudspace still in deployment, will retry to create portforwarding in 10 second")
+                time.sleep(10)
                 return self.portforward_create(None, localport, protocol)
 
             # - if the port was choose explicitly, then it's not the lib's fault
