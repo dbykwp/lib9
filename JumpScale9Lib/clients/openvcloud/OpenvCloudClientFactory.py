@@ -425,6 +425,7 @@ class Space(Authorizables):
         self.client = account.client
         self.model = model
         self.id = model["id"]
+        self.logger = j.logger.logging
 
     def externalnetwork_add(self, name, subnet, gateway, startip, endip, gid, vlan):
         self.client.api.cloudbroker.iaas.addExternalNetwork(cloudspaceId=self.id,
