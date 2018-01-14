@@ -14,7 +14,7 @@ class TestGuthubClient(unittest.TestCase):
         for module in sorted([item for item in sys.modules.keys() if 'JumpScale9' in item], reverse=True):
             del sys.modules[module]
 
-    @pytest.mark.ssh_factory
+    @pytest.mark.github_client
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Github')
     def test_organizations_get(self, mock_github):
         """
@@ -27,7 +27,7 @@ class TestGuthubClient(unittest.TestCase):
         # assert the expected call for get_orgs
         githubclient.api.get_user().get_orgs.assert_called_with()
 
-    @pytest.mark.ssh_factory
+    @pytest.mark.github_client
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Github')
     def test_repos_get(self, mock_github):
         """
@@ -49,7 +49,7 @@ class TestGuthubClient(unittest.TestCase):
             # assert the expected call for get_user().get_orgs if organization id provided
             githubclient.api.get_user().get_orgs.assert_called_with()
 
-    @pytest.mark.ssh_factory
+    @pytest.mark.github_client
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Github')
     def test_repo_get(self, mock_github):
         """
@@ -62,7 +62,7 @@ class TestGuthubClient(unittest.TestCase):
         # assert the expected call for get_repo
         githubclient.api.get_user().get_repo.assert_called_with("repo")
 
-    @pytest.mark.ssh_factory
+    @pytest.mark.github_client
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Github')
     def test_repo_create(self, mock_github):
         """
@@ -76,7 +76,7 @@ class TestGuthubClient(unittest.TestCase):
         githubclient.api.get_user().create_repo.assert_called_with("repo", description=github.GithubObject.NotSet, homepage=github.GithubObject.NotSet, private=github.GithubObject.NotSet, has_issues=github.GithubObject.NotSet, has_wiki=github.GithubObject.NotSet,
                     has_downloads=github.GithubObject.NotSet, auto_init=github.GithubObject.NotSet, gitignore_template=github.GithubObject.NotSet)
     
-    @pytest.mark.ssh_factory
+    @pytest.mark.github_client
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Github')
     @mock.patch('JumpScale9Lib.clients.github.Github.github.Repository')
     def test_repo_delete(self, mock_github, mock_repository):
