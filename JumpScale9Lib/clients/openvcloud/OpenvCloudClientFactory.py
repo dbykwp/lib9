@@ -664,7 +664,7 @@ class Space(Authorizables):
 
         sshclient = j.clients.ssh.get(
             addr=publicip, port=sshport, login=login, passwd=password, allow_agent=False, look_for_keys=False,
-            timeout=300)
+            timeout=300, usecache=False)
         # make sure that SSH key is loaded
         bad_auth_type_exist = True
         bad_auth_type_instance = None
@@ -1021,9 +1021,9 @@ class Machine:
                 j.clients.ssh.load_ssh_key(self.ssh_keypath)
                 sshclient = j.clients.ssh.get(addr=publicip, port=sshport, key_filename=self.ssh_keypath)
                 sshclient.connect()
-                executor = j.tools.executor.getFromSSHClient(sshclient)
+                executor = j.tools.executor.getFromSSHClient(sshclient, usecache=False)
             else:
-                sshclient = j.clients.ssh.get(addr=publicip, port=sshport)
+                sshclient = j.clients.ssh.get(addr=publicip, port=sshport, usecache=False)
                 executor = j.tools.executor.getFromSSHClient(sshclient)
             
     
