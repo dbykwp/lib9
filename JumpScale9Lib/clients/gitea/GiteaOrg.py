@@ -1,84 +1,100 @@
+import json
 from js9 import j
-from .GiteaRepo import GiteaRepo
-
-default_labels = [
-    {'color': '#e11d21', 'name': 'priority_critical'},
-    {'color': '#f6c6c7', 'name': 'priority_major'},
-    {'color': '#f6c6c7', 'name': 'priority_minor'},
-    {'color': '#d4c5f9', 'name': 'process_duplicate'},
-    {'color': '#d4c5f9', 'name': 'process_wontfix'},
-    {'color': '#bfe5bf', 'name': 'state_inprogress'},
-    {'color': '#bfe5bf', 'name': 'state_question'},
-    {'color': '#bfe5bf', 'name': 'state_verification'},
-    {'color': '#fef2c0', 'name': 'type_bug'},
-    {'color': '#fef2c0', 'name': 'type_task'},
-    {'color': '#fef2c0', 'name': 'type_story'},
-    {'color': '#fef2c0', 'name': 'type_feature'},
-    {'color': '#fef2c0', 'name': 'type_question'}
-]
 
 JSBASE = j.application.jsbase_get_class()
 
 
 class GiteaOrg(JSBASE):
 
-    def __init__(self, client, name):
+    def __init__(
+            self,
+            user,
+            avatar_url=None,
+            description=None,
+            full_name=None,
+            id=None,
+            location=None,
+            username=None,
+            website=None
+    ):
         JSBASE.__init__(self)
-        self.name = name
-        self.id = client.orgs_currentuser_list()[name]
-        self.client = client
-        self.api = self.client.api.orgs
+        self.user = user
+        self.avatar_url = avatar_url
+        self.description = description
+        self.full_name = full_name
+        self.id = id
+        self.location = location
+        self.username = username
+        self.website = website
 
-    def labels_default_get(self):
-        return default_labels
+    @property
+    def data(self):
+        d = {}
 
-    def _repos_get(self, refresh=False):
-        def do():
-            res = {}
-            for item in self.client.api.orgs.orgListRepos(self.name)[0]:
-                res[item.name] = item
-            return res
-        return self.cache.get("orgs", method=do, refresh=refresh, expire=60)
+        for attr in [
+            'id',
+            'avatar_url',
+            'description',
+            'full_name',
+            'location',
+            'username',
+            'website',
+        ]:
 
-    def repos_list(self, refresh=False):
-        res = {}
-        for name, item in self._repos_get(refresh=refresh).items():
-            res[name] = item.id
-        return res
+            v = getattr(self, attr)
+            if v:
+                d[attr] = v
+        return d
 
-    def repo_get(self, name):
-        self.logger.info("repo:get:%s" % name)
-        if name not in self._repos_get().keys():
-            raise RuntimeError("cannot find repo with name:%s in %s" % (name, self))
-        data = self._repos_get()[name]
-        return GiteaRepo(self, name, data)
+    def validate(self, create=False, update=False, delete=False):
+        """
+            Validate required attributes are set before doing any operation
+        """
+        errors = {}
+        is_valid = True
 
-    def repo_new(self, name):
-        self.logger.info("repo:new:%s" % name)
-        if name in self._repos_get().keys():
-            self.logger.debug("no need to create repo on gitea, exists:%s"%name)
-            return self._repos_get()[name]
+        operation = 'create'
+
+        if update or delete:
+            raise NotImplementedError()
+
+        elif create:
+            if self.id:
+                is_valid = False
+                errors['id'] = 'Already existing'
+            else:
+                if not self.user.username:
+                    is_valid = False
+                    errors['user'] = {'username':'Missing'}
+
+                if not self.full_name:
+                    is_valid = False
+                    errors['full_name'] = 'Missing'
+
+                if not self.username:
+                    is_valid = False
+                    errors['username'] = 'Missing'
         else:
+            raise RuntimeError('You must choose operation to validate')
 
-            data = {'name': name}
-            return self.client.api.org.createOrgRepo(data, org=self.name)
+        if is_valid:
+            return True, ''
 
-    def labels_milestones_add(self, labels=default_labels, remove_old=False):
-        """
-        If a label with the same name exists on a repo, it won't be added.
+        return False, '{0} Error '.format(operation) + json.dumps(errors)
 
-        :param labels: a list of labels  ex: [{'color': '#fef2c0', 'name': 'state_blocked'}]
+    def save(self, update=False):
+        is_valid, err = self.validate(update=update, create=not update)
 
-        goes over all repo's in this org
+        if not is_valid:
+            raise Exception(err)
 
-        """
-        for repo_name in self.repos_list():
-            repo = self.repo_get(repo_name)
+        if not update:
+            resp = self.user.client.api.admin.adminCreateOrg(data=self.data, username=self.user.username)
+            user = resp.json()
+            for k, v in user.items():
+                setattr(self, k, v)
 
-            repo.milestones_add(remove_old=remove_old)
-            repo.labels_add(labels, remove_old=remove_old)
+        elif update:
+                raise NotImplementedError()
 
-    def __repr__(self):
-        return "org:%s" % self.name
-
-    __str__ = __repr__
+    __str__ = __repr__ = lambda self: json.dumps(self.data)

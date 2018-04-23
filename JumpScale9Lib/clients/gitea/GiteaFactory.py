@@ -48,30 +48,15 @@ class GiteaFactory(JSConfigBase):
         cl = self.get()
         cl.cache.reset()
 
-        print(cl.orgs_currentuser_list())
+        # Test start
+        j.logger.logger.info('\n\n\n### Test Start\n\n\n')
 
-        names = [item for item in cl.orgs_currentuser_list().keys()]
-        names.sort()
-        if "test" in names:
-            name = "test"
-        else:
-            raise RuntimeError("can only run test if test org exists")
+        # Print API version
+        j.logger.logger.info(cl.version)
 
-        org = cl.org_get(name)
+        # Admin
 
-        # CAREFULL WILL GO OVER ALL MILESTONES
-        # org.labels_milestones_add(remove_old=False)
+        admin = cl.admin
+        admin.test()
 
-        if "testrepo" not in org.repos_list():
-            #means no test repo yet, lets create one
-            org.repo_new("testrepo")
-
-
-        print(org.repos_list())
-        repo_name = [item for item in org.repos_list(refresh=True).keys()][0]  # first reponame
-
-        repo = org.repo_get(repo_name)
-
-        print(repo.issues_get())
-
-        org.labels_milestones_add(remove_old=True)
+        j.logger.logger.info('\n\n\n### Test End\n\n\n')

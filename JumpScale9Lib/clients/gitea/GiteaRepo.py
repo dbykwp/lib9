@@ -1,157 +1,118 @@
+import json
 from js9 import j
-from datetime import datetime
-import calendar
 
 JSBASE = j.application.jsbase_get_class()
 
 
 class GiteaRepo(JSBASE):
 
-    def __init__(self, org, name, data):
+    def __init__(
+            self,
+            user,
+            clone_url=None,
+            created_at=None,
+            default_branch=None,
+            description=None,
+            empty=False,
+            fork=False,
+            forks_count=None,
+            full_name=None,
+            html_url=None,
+            id=None,
+            mirror=None,
+            name=None,
+            open_issues_count=None,
+            owner=None
+
+    ):
         JSBASE.__init__(self)
-        self.name = data.name
-        self.owner = data.owner.login
-        self.data = data
-        self.org = org
-        self.id = data.id
-        self.client = org.client
-        self.api = self.client.api.repos
-
-    def labels_add(self, labels=None, remove_old=False):
-        """
-        Add multiple labels to 1 or more repo's
-
-        If a label with the same name exists on a repo, it won't be added.
-
-        :param labels: a list of labels  ex: [{'color': '#fef2c0', 'name': 'state_blocked'}]
-
-
-        default goes over all repo's
-
-        """
-
-        self.logger.info("labels add")
-
-
-        labels_default = self.org.labels_default_get() if labels is None else []
-
-        repo_labels = self.api.issueListLabels(self.name, self.owner)[0]
-        # @TODO: change the way we check on label name when this is fixed
-        names = [l.name for l in repo_labels]
-        for label in labels_default:
-            if label["name"] in names:
-                continue
-            self.client.api.repos.issueCreateLabel(label, self.name, self.owner)
-
-        def get_label_id(name):
-            for item in repo_labels:
-                if item.name == name:
-                    return str(item.id)
-
-        if remove_old:
-            labels_on_repo = [item.name for item in repo_labels]
-            labels_default = [item.name for item in labels_default]
-            for label in labels_on_repo:
-                if label not in labels_default:
-                    self.client.api.repos.issueDeleteLabel(get_label_id(label), self.name, self.owner)
-
-    def milestones_add(self, milestones=None, remove_old=False):
-        """
-        Add multiple milestones to multiple repos.
-        If a milestone with the same title exists on a repo, it won't be added.
-        If no milestones are supplied, the default milestones for the current quarter will be added.
-
-        :param milestones: a list of milestones ex: [['Q1','2018-03-31'],...]
-        :return:
-        """
-        self.logger.info("milestones add")
-
-        if not milestones:
-            milestones = self.milestones_default
-
-        def deadline_get(year_month_day):
-            year, month, day = year_month_day.split("-")
-            return '%s-%s-%sT23:59:00Z' % (year, str(month).zfill(2), str(day).zfill(2))
-
-        def milestone_get(title, deadline):
-            deadline = deadline_get(deadline)
-            return {"title": title, "due_on": deadline}
-
-        repo_milestones = self.client.api.repos.issueGetMilestones(self.name, self.owner)[0]
-        # @TODO: change the way we check on milestone title when this is fixed https://github.com/Jumpscale/go-raml/issues/396
-        names = [m.title for m in repo_milestones]
-        for title, deadline in milestones:
-            if title in names:
-                continue
-            milestone = milestone_get(title, deadline)
-            self.client.api.repos.issueCreateMilestone(milestone, self.name, self.owner)
-
-        milestone = milestone_get("roadmap", "2100-12-30")
-        self.client.api.repos.issueCreateMilestone(milestone, self.name, self.owner)
-
-        if remove_old:
-            milestones_default = [item[0] for item in milestones]
-            for item in repo_milestones:
-                if item.title not in milestones_default:
-                    self.client.api.repos.issueDeleteMilestone(str(item.id), self.name, self.owner)
+        self.user = user
+        self.clone_url = clone_url
+        self.description = description
+        self.full_name = full_name
+        self.id = id
+        self.created_at = created_at
+        self.default_branch = default_branch
+        self.empty = empty
+        self.fork = fork
+        self.forks_count = forks_count
+        self.html_url = html_url
+        self.mirror = mirror
+        self.name = name
+        self.open_issues_count = open_issues_count
+        self.owner = owner
 
     @property
-    def milestones_default(self):
+    def data(self):
+        d = {}
+
+        for attr in [
+            'id',
+            'clone_url',
+            'description',
+            'full_name',
+            'created_at',
+            'default_branch',
+            'empty',
+            'fork',
+            'forks_count',
+            'html_url',
+            'mirror',
+            'name',
+            'open_issues_count',
+            'owner'
+        ]:
+
+            v = getattr(self, attr)
+            if v:
+                d[attr] = v
+        return d
+
+    def validate(self, create=False, update=False, delete=False):
         """
+            Validate required attributes are set before doing any operation
         """
+        errors = {}
+        is_valid = True
 
-        today = datetime.today()
-        thismonth = today.month
-        months = [i for i in range(thismonth, thismonth + 5)]
-        year = today.year
-        milestones = []
+        operation = 'create'
 
-        # Set the begining of the week to Sunday
-        c = calendar.Calendar(calendar.SUNDAY)
+        if update or delete:
+            raise NotImplementedError()
 
-        # Add weekly milestones
-        for month in months:
-            lastdate = [item for item in c.itermonthdates(2018, month) if item.month == month][-1]
-            month_name = calendar.month_name[month].lower()[0:3]
-            # weeks = c.monthdayscalendar(year, month)
+        elif create:
+            if self.id:
+                is_valid = False
+                errors['id'] = 'Already existing'
+            else:
+                if not self.user.username:
+                    is_valid = False
+                    errors['user'] = {'username':'Missing'}
 
-            due_on = '%s-%s-%s' % (lastdate.year, str(lastdate.month).zfill(2), str(lastdate.day).zfill(2))
-            milestones.append((month_name, due_on))
+                if not self.name:
+                    is_valid = False
+                    errors['name'] = 'Missing'
+        else:
+            raise RuntimeError('You must choose operation to validate')
 
-            # if month == thismonth:
-            #     for i, week in enumerate(weeks):
-            #         # check if this week has a value for Saturday
-            #         day = week[6]
-            #         if day:
-            #             title = '%s_w%s' % (month_name, i + 1)
-            #             due_on = '%s-%s-%s' % (year, str(month).zfill(2), str(day).zfill(2))
-            #             milestones.append((title, due_on))
-            # else:
-            #     res=[]
-            #     for i, week in enumerate(weeks):
-            #         # check if this week has a value for Saturday
-            #         day = week[6]
-            #         if day:
-            #             res.append((i,day))
-            #     i,day=res[-1]
-            #     title = '%s_w%s' % (month_name, i + 1)
-            #     due_on = '%s-%s-%s' % (year, str(month).zfill(2), str(day).zfill(2))
-            #     milestones.append((title, due_on))
+        if is_valid:
+            return True, ''
 
-        # Add quarter milestone
-        for quarter in range(1, 5):
-            title = 'Q%s' % quarter
-            quarter_month = quarter * 3
-            last_day = calendar.monthrange(year, quarter_month)[1]
-            due_on = '%s-%s-%s' % (year, str(quarter_month).zfill(2), last_day)
-            milestones.append((title, due_on))
+        return False, '{0} Error '.format(operation) + json.dumps(errors)
 
-        return milestones
+    def save(self, update=False):
+        is_valid, err = self.validate(update=update, create=not update)
 
-    def issues_get(self):
-        return self.api.issueListIssues(self.name, self.owner)[0]
+        if not is_valid:
+            raise Exception(err)
 
-    def __repr__(self):
-        return "repo:%s" % self.name
+        if not update:
+            resp = self.user.client.api.admin.adminCreateRepo(data=self.data, username=self.user.username)
+            user = resp.json()
+            for k, v in user.items():
+                setattr(self, k, v)
 
-    __str__ = __repr__
+        elif update:
+                raise NotImplementedError()
+
+    __str__ = __repr__ = lambda self: json.dumps(self.data)

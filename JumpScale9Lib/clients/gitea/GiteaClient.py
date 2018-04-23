@@ -1,6 +1,10 @@
 from js9 import j
 
-from .GiteaOrg import GiteaOrg
+from .GiteaMarkdowns import GiteaMarkdowns
+from .GiteaRepos import GiteaRepos
+from .GiteaOrgs import GiteaOrgs
+from .GiteaAdmin import GiteaAdmin
+from .GiteaVersion import GiteaVersion
 
 from JumpScale9Lib.clients.gitea.client import Client
 
@@ -43,48 +47,25 @@ class GiteaClient(JSConfigBase):
                 'token {}'.format(self.config.data["gitea_token_"]))
         return self._api
 
-    def orgs_currentuser_list(self, refresh=False):
-        """
-        returns [(id,name)]
-        """
-        def do():
-            res = {}
-            for item in self.api.user.orgListCurrentUserOrgs()[0]:
-                res[item.username] = item.id
-            return res
-        return self.cache.get("orgs", method=do, refresh=refresh, expire=60)
+    @property
+    def version(self):
+        return GiteaVersion(self).get()
 
-    def org_get(self, name):
-        self.logger.info("org:get:%s" % name)
-        if name not in self.orgs_currentuser_list().keys():
-            raise RuntimeError("Could not find %s in orgs on gitea" % name)
-        return GiteaOrg(self, name)
+    @property
+    def admin(self):
+        return GiteaAdmin(self)
 
-    def labels_milestones_set(self, orgname="*", reponame="*", remove_old=False):
-        """
-        * means all in the selection
+    @property
+    def markdowns(self):
+        return GiteaMarkdowns(self)
 
-        @PARAM remove_old if True will select labels/milestones which are old & need to be removed
+    @property
+    def orgs(self):
+        return GiteaOrgs(self)
 
-        """
-        self.logger.info("labels_milestones_set:%s:%s" % (orgname, reponame))
-        if orgname == "*":
-            for orgname0 in self.orgs_currentuser_list():
-                self.labels_milestones_set(orgname=orgname0, reponame=reponame, remove_old=remove_old)
-            return
-
-        org = self.org_get(orgname)
-
-        if reponame == "*":
-            for reponame0 in org.repos_list():
-                # self.logger.debug(org.repos_list())
-                # self.logger.debug("reponame0:%s"%reponame0)
-                self.labels_milestones_set(orgname=orgname, reponame=reponame0, remove_old=remove_old)
-            return
-
-        repo = org.repo_get(reponame)
-        repo.labels_add(remove_old=remove_old)
-        repo.milestones_add(remove_old=remove_old)
+    @property
+    def repos(self):
+        return GiteaRepos(self)
 
     def __repr__(self):
         return "gitea client"
