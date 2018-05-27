@@ -5,7 +5,7 @@ class UserService:
     def __init__(self, client):
         self.client = client
 
-    def userDeleteEmail(self, headers=None, query_params=None, content_type="application/json"):
+    def userDeleteEmail(self, data, headers=None, query_params=None, content_type="application/json"):
         """
         Delete email addresses
         It is method for DELETE /user/emails
@@ -14,7 +14,7 @@ class UserService:
             query_params = {}
 
         uri = self.client.base_url + "/user/emails"
-        return self.client.delete(uri, None, headers, query_params, content_type)
+        return self.client.delete(uri, data, headers, query_params, content_type)
 
     def userListEmails(self, headers=None, query_params=None, content_type="application/json"):
         """
@@ -278,17 +278,6 @@ class UserService:
             query_params = {}
 
         uri = self.client.base_url + "/user/times"
-        return self.client.get(uri, None, headers, query_params, content_type)
-
-    def orgListUserOrgs(self, username, headers=None, query_params=None, content_type="application/json"):
-        """
-        List a user's organizations
-        It is method for GET /user/{username}/orgs
-        """
-        if query_params is None:
-            query_params = {}
-
-        uri = self.client.base_url + "/user/" + username + "/orgs"
         return self.client.get(uri, None, headers, query_params, content_type)
 
     def userGetCurrent(self, headers=None, query_params=None, content_type="application/json"):

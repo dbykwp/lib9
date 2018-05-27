@@ -5,7 +5,7 @@ class TeamsService:
     def __init__(self, client):
         self.client = client
 
-    def orgAddTeamMember(self, username, id, headers=None, query_params=None, content_type="application/json"):
+    def orgDeleteTeamMember(self, username, id, headers=None, query_params=None, content_type="application/json"):
         """
         Remove a team member
         It is method for DELETE /teams/{id}/members/{username}
@@ -38,7 +38,7 @@ class TeamsService:
         uri = self.client.base_url + "/teams/" + id + "/members"
         return self.client.get(uri, None, headers, query_params, content_type)
 
-    def orgAddTeamMember(self, org, repo, id, headers=None, query_params=None, content_type="application/json"):
+    def orgDeleteTeamRepo(self, org, repo, id, headers=None, query_params=None, content_type="application/json"):
         """
         This does not delete the repository, it only removes the repository from the team.
         It is method for DELETE /teams/{id}/repos/{org}/{repo}
@@ -49,7 +49,7 @@ class TeamsService:
         uri = self.client.base_url + "/teams/" + id + "/repos/" + org + "/" + repo
         return self.client.delete(uri, None, headers, query_params, content_type)
 
-    def orgAddTeamMember(self, data, org, repo, id, headers=None, query_params=None, content_type="application/json"):
+    def orgAddTeamRepo(self, data, org, repo, id, headers=None, query_params=None, content_type="application/json"):
         """
         Add a repository to a team
         It is method for PUT /teams/{id}/repos/{org}/{repo}

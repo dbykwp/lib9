@@ -74,6 +74,17 @@ class UsersService:
         uri = self.client.base_url + "/users/" + username + "/keys"
         return self.client.get(uri, None, headers, query_params, content_type)
 
+    def orgListUserOrgs(self, username, headers=None, query_params=None, content_type="application/json"):
+        """
+        List a user's organizations
+        It is method for GET /users/{username}/orgs
+        """
+        if query_params is None:
+            query_params = {}
+
+        uri = self.client.base_url + "/users/" + username + "/orgs"
+        return self.client.get(uri, None, headers, query_params, content_type)
+
     def userListRepos(self, username, headers=None, query_params=None, content_type="application/json"):
         """
         List the repos owned by the given user

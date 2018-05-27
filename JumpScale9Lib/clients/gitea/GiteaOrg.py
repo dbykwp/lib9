@@ -1,6 +1,11 @@
 import json
 from js9 import j
 
+from .GiteaTeams import GiteaTeams
+from .GiteaOrgMembers import GiteaOrgMembers
+from .GiteaOrgRepos import GiteaOrgRepos
+from .GiteaOrgHooks import GiteaOrgHooks
+
 JSBASE = j.application.jsbase_get_class()
 
 
@@ -8,6 +13,7 @@ class GiteaOrg(JSBASE):
 
     def __init__(
             self,
+            client,
             user,
             avatar_url=None,
             description=None,
@@ -18,6 +24,7 @@ class GiteaOrg(JSBASE):
             website=None
     ):
         JSBASE.__init__(self)
+        self.client = client
         self.user = user
         self.avatar_url = avatar_url
         self.description = description
@@ -42,23 +49,20 @@ class GiteaOrg(JSBASE):
         ]:
 
             v = getattr(self, attr)
-            if v:
-                d[attr] = v
+            d[attr] = v
         return d
 
-    def validate(self, create=False, update=False, delete=False):
-        """
-            Validate required attributes are set before doing any operation
-        """
+    def _validate(self, create=False, update=False, delete=False):
         errors = {}
         is_valid = True
 
         operation = 'create'
 
-        if update or delete:
-            raise NotImplementedError()
+        if create:
+            if not self.user.is_current and not self.client.users.current.is_admin:
+                is_valid = False
+                errors['permissions'] = 'Admin permissions required'
 
-        elif create:
             if self.id:
                 is_valid = False
                 errors['id'] = 'Already existing'
@@ -74,27 +78,54 @@ class GiteaOrg(JSBASE):
                 if not self.username:
                     is_valid = False
                     errors['username'] = 'Missing'
-        else:
-            raise RuntimeError('You must choose operation to validate')
+        elif update:
+            operation = 'update'
+            if not self.user.is_member_of_org(self.username):
+                is_valid = False
+                errors['permissions'] = 'user is not member of the organization'
+            if not self.id:
+                is_valid = False
+                errors['id'] = 'Missing'
+            if not self.username:
+                is_valid = False
+                errors['id'] = 'Missing'
+
+        elif delete:
+            operation = 'delete'
+            if not self.id:
+                is_valid = False
+                errors['id'] = 'Missing'
+            if not self.username:
+                is_valid = False
+                errors['id'] = 'Missing'
+            if not self.user.is_current and not self.client.users.current.is_admin:
+                is_valid = False
+                errors['permissions'] = 'Admin permissions required'
 
         if is_valid:
             return True, ''
 
         return False, '{0} Error '.format(operation) + json.dumps(errors)
 
-    def save(self, update=False):
-        is_valid, err = self.validate(update=update, create=not update)
+    @property
+    def hooks(self):
+        return GiteaOrgHooks(self.user.client, self)
 
-        if not is_valid:
-            raise Exception(err)
+    @property
+    def repos(self):
+        return GiteaOrgRepos()
 
-        if not update:
-            resp = self.user.client.api.admin.adminCreateOrg(data=self.data, username=self.user.username)
-            user = resp.json()
-            for k, v in user.items():
-                setattr(self, k, v)
+    @property
+    def members(self):
+        return GiteaOrgMembers(self.user.client, self)
 
-        elif update:
-                raise NotImplementedError()
+    @property
+    def teams(self):
+        return  GiteaTeams(self.user.client, self)
 
-    __str__ = __repr__ = lambda self: json.dumps(self.data)
+    def __repr__ (self):
+        return '\n<Organization>\n{0}'.format(
+            json.dumps(self.data, indent=4)
+        )
+
+    __str__ = __repr__

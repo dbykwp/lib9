@@ -1,6 +1,11 @@
 import json
 from js9 import j
 
+from .GiteaUserCurrentGpgKeys import GiteaUserCurrentGpgKeys
+from .GiteaUserCurrentPublicKeys import GiteaUserCurrentPublicKeys
+from .GiteaIssues import GiteaIssues
+from .GiteaGpgKeys import GiteaGpgKeys
+from .GiteaTokens import GiteaTokens
 from .GiteaOrgs import  GiteaOrgs
 from .GiteaRepos import  GiteaRepos
 from .GiteaPublicKeys import GiteaPublicKeys
@@ -9,6 +14,7 @@ JSBASE = j.application.jsbase_get_class()
 
 
 class GiteaUser(JSBASE):
+    is_current = False
 
     def __init__(
             self,
@@ -28,7 +34,8 @@ class GiteaUser(JSBASE):
             location=None,
             max_repo_creation=None,
             website=None,
-            avatar_url=None):
+            avatar_url=None
+    ):
 
         JSBASE.__init__(self)
         self.client = client
@@ -48,6 +55,48 @@ class GiteaUser(JSBASE):
         self.max_repo_creation = max_repo_creation
         self.website = website
         self.avatar_url = avatar_url
+        self._is_admin = None
+
+    @property
+    def is_admin(self):
+        if self._is_admin is None:
+            try:
+                self.client.api.admin.adminCreateUser(data={}).json()
+            except Exception as e:
+                if e.response.status_code == 403:
+                    self._is_admin = False
+                else:
+                    # current gitea client user is admin
+                    if self.client.users.current.username == self.username:
+                        self._is_admin = True
+                    elif self.username in self.client.config.data['admins']:
+                        self._is_admin = True
+                    else:
+                        self._is_admin = False
+        return self._is_admin
+
+    def is_member_of_org(self, org):
+        is_member = False
+
+        if self.is_admin:
+            is_member = True
+        else:
+            try:
+                self.client.api.orgs.orgIsMember(
+                    org=org,
+                    username=self.username
+                )
+                is_member = True
+
+            except Exception as e:
+                is_member = False
+
+        if is_member:
+            self.logger.debug('{0} is member of organization {1}'.format(self.username, org))
+            return True
+        else:
+            self.logger.debug('{0} is not member of organization {1}'.format(self.username, org))
+            return False
 
     @property
     def data(self):
@@ -76,11 +125,10 @@ class GiteaUser(JSBASE):
         ]:
 
             v = getattr(self, attr)
-            if v:
-                d[attr] = v
+            d[attr] = v
         return d
 
-    def validate(self, create=False, update=False, delete=False):
+    def _validate(self, create=False, update=False, delete=False):
         """
             Validate required attributes are set before doing any operation
         """
@@ -95,6 +143,10 @@ class GiteaUser(JSBASE):
             operation = 'delete'
 
         # Create or update
+
+        if not self.is_admin:
+            is_valid = False
+            errors['permissions'] = 'Admin permissions required'
 
         if update or delete:
             if not self.username:
@@ -124,42 +176,109 @@ class GiteaUser(JSBASE):
             return True, ''
         return False, '{0} Error '.format(operation) + json.dumps(errors)
 
-    def save(self, update=False):
-        """
-        Save User
-        """
-        is_valid, err = self.validate(update=update)
+    def save(self, commit=True):
+        is_valid, err = self._validate(create=True)
 
-        if not is_valid:
-            raise Exception(err)
+        if not commit or not is_valid:
+            self.logger.debug(err)
+            return is_valid
 
-        if not update:
+        try:
             resp = self.client.api.admin.adminCreateUser(data=self.data)
             user = resp.json()
             for k, v in user.items():
                 setattr(self, k, v)
+            return True
+        except Exception as e:
+            self.logger.debug(e.response.content)
+            return False
 
-        elif update:
+    def update(self, commit=True):
+        is_valid, err = self._validate(update=True)
+
+        if not commit or not is_valid:
+            self.logger.debug(err)
+            return is_valid
+
+        try:
             self.client.api.admin.adminEditUser(data=self.data, username=self.username)
+            return True
+        except Exception as e:
+            self.logger.debug(e.response.content)
+            return False
 
-    def delete(self):
-        is_valid, err = self.validate(create=False, delete=True)
+    def delete(self, commit=True):
+        is_valid, err = self._validate(delete=True)
 
-        if not is_valid:
-            raise Exception(err)
+        if not commit or not is_valid:
+            self.logger.debug(err)
+            return is_valid
+        try:
+            self.client.api.admin.adminDeleteUser(username=self.username)
+            self.id = None
+            return True
+        except Exception as e:
+            self.logger.debug(e.response.content)
+            return False
 
-        self.client.api.admin.adminDeleteUser(username=self.username)
+    @property
+    def followers(self):
+        result = []
+        for follower in self.client.api.users.userListFollowers(username=self.username).json():
+            user = self.client.users.new(username=follower['username'])
+            for k, v in follower.items():
+                setattr(user, k, v)
+            result.append(user)
+        return result
+
+    @property
+    def following(self):
+        result = []
+        for following in self.client.api.users.userListFollowing(username=self.username).json():
+            user = self.client.users.new(username=following['username'])
+            for k, v in following.items():
+                setattr(user, k, v)
+            result.append(user)
+        return result
+
+    def is_following(self, followee):
+        try:
+            self.client.api.users.userCheckFollowing(follower=self.username, followee=followee)
+            return True
+        except Exception as e:
+            if e.response.status_code != 404:
+                self.logger.debug('username does not exist')
+            return False
 
     @property
     def keys(self):
-        return GiteaPublicKeys(self)
+        if self.is_current:
+            return GiteaUserCurrentPublicKeys(self.client, self)
+        return GiteaPublicKeys(self.client, self)
+
+    @property
+    def gpg_keys(self):
+        if self.is_current:
+            return GiteaUserCurrentGpgKeys(self.client, self)
+        return GiteaGpgKeys(self.client, self)
 
     @property
     def organizations(self):
-        return GiteaOrgs(self)
+        return GiteaOrgs(self.client, self)
 
     @property
     def repos(self):
-        return GiteaRepos(self)
+        return GiteaRepos(self.client, self)
 
-    __str__ = __repr__ = lambda self: json.dumps(self.data)
+    @property
+    def tokens(self):
+        return GiteaTokens(self.client, self)
+
+    @property
+    def issues(self):
+        return GiteaIssues(self.client, self)
+
+    def __str__(self):
+        return '\n<User>\n%s' % json.dumps(self.data, indent=4)
+
+    __repr__ = __str__

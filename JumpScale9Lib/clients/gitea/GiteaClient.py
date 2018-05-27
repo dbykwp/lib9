@@ -1,17 +1,18 @@
+import json
+
 from js9 import j
 
-from .GiteaMarkdowns import GiteaMarkdowns
-from .GiteaRepos import GiteaRepos
+from .GiteaRepositories import GiteaRepositories
 from .GiteaOrgs import GiteaOrgs
-from .GiteaAdmin import GiteaAdmin
-from .GiteaVersion import GiteaVersion
-
+from .GiteaMarkdowns import GiteaMarkdowns
+from .GiteaUsers import GiteaUsers
 from JumpScale9Lib.clients.gitea.client import Client
 
 
 TEMPLATE = """
 url = ""
 gitea_token_ = ""
+admins = ""
 """
 
 JSConfigBase = j.tools.configmanager.base_class_config
@@ -19,16 +20,34 @@ JSBASE = j.application.jsbase_get_class()
 
 
 class GiteaClient(JSConfigBase):
+    def __init__(
+            self,
+            instance,
+            data={},
+            parent=None,
+            interactive=False
+    ):
 
-    def __init__(self, instance, data={}, parent=None,interactive=False):
-        JSConfigBase.__init__(self, instance=instance, data=data, parent=parent, template=TEMPLATE,interactive=interactive)
+        JSConfigBase.__init__(
+            self,
+            instance=instance,
+            data=data,
+            parent=parent,
+            template=TEMPLATE,
+            interactive=interactive
+        )
+
         self._api = None
+        self.version = self.api.version.getVersion().json()['version']
+        self.markdowns = GiteaMarkdowns(self)
+        self.users = GiteaUsers(self)
+        self.organizations = GiteaOrgs(client=self, user=self.users.current)
+        self.repos = GiteaRepositories(client=self, user=self.users.current)
 
     def config_check(self):
         """
         check the configuration if not what you want the class will barf & show you where it went wrong
         """
-
         if self.config.data["url"] == "" or self.config.data["gitea_token_"] == "":
             return "url and gitea_token_ are not properly configured, cannot be empty"
 
@@ -47,27 +66,14 @@ class GiteaClient(JSConfigBase):
                 'token {}'.format(self.config.data["gitea_token_"]))
         return self._api
 
-    @property
-    def version(self):
-        return GiteaVersion(self).get()
-
-    @property
-    def admin(self):
-        return GiteaAdmin(self)
-
-    @property
-    def markdowns(self):
-        return GiteaMarkdowns(self)
-
-    @property
-    def orgs(self):
-        return GiteaOrgs(self)
-
-    @property
-    def repos(self):
-        return GiteaRepos(self)
+    def test(self):
+        self.markdowns.test()
 
     def __repr__(self):
-        return "gitea client"
+        return '<Gitea Client: v={0} user={1} admin={2}>'.format(
+            self.version,
+            self.users.current.data['username'],
+            self.users.current.is_admin
+        )
 
     __str__ = __repr__

@@ -8,6 +8,7 @@ class GiteaPublicKey(JSBASE):
 
     def __init__(
             self,
+            client,
             user,
             id=None,
             key=None,
@@ -18,6 +19,7 @@ class GiteaPublicKey(JSBASE):
     ):
         JSBASE.__init__(self)
         self.user = user
+        self.client = client
         self.id = id
         self.key = key
         self.title = title
@@ -41,7 +43,7 @@ class GiteaPublicKey(JSBASE):
                 d[attr] = v
         return d
 
-    def validate(self, create=False, update=False, delete=False):
+    def _validate(self, create=False, delete=False):
         """
             Validate required attributes are set before doing any operation
         """
@@ -50,10 +52,8 @@ class GiteaPublicKey(JSBASE):
 
         operation = 'create'
 
-        if update:
-            raise NotImplementedError()
+        if create:
 
-        elif create:
             if self.id:
                 is_valid = False
                 errors['id'] = 'Already existing'
@@ -71,40 +71,59 @@ class GiteaPublicKey(JSBASE):
                     errors['title'] = 'Missing'
 
         elif delete:
+            operation = 'delete'
             if not self.id:
                 is_valid = False
                 errors['id'] = 'Missing'
-        else:
-            raise RuntimeError('You must choose operation to validate')
+
+        if not self.user.is_admin:
+            is_valid = False
+            errors['permissions'] = 'Admin permissions required'
 
         if is_valid:
             return True, ''
 
         return False, '{0} Error '.format(operation) + json.dumps(errors)
 
-    def save(self, update=False):
+    def save(self, commit=True):
         """
         Create public key for user
         """
-        is_valid, err = self.validate(update=update, create=not update)
+        is_valid, err = self._validate(create=True)
 
-        if not is_valid:
-            raise Exception(err)
+        if not commit or not is_valid:
+            self.logger.debug(err)
+            return is_valid
 
-        if not update:
-            resp = self.user.client.api.admin.adminCreatePublicKey(self.data, self.user.username)
+        try:
+            resp = self.client.api.admin.adminCreatePublicKey(self.data, self.user.username)
             pubkey = resp.json()
             for k, v in pubkey.items():
                 setattr(self, k, v)
-        else:
-            raise NotImplementedError()
+            return True
+        except Exception as e:
+            self.logger.debug(e.response.content)
+            return False
 
-    def delete(self):
-        is_valid, err = self.validate(delete=True)
+    def delete(self, commit=True):
+        is_valid, err = self._validate(delete=True)
 
-        if not is_valid:
-            raise Exception(err)
+        if not commit or not is_valid:
+            self.logger.debug(err)
+            return is_valid
 
-        self.client.user.client.api.admin.adminDeleteUserPublicKey(username=self.username, id=self.id)
+        try:
+            self.client.api.admin.adminDeleteUserPublicKey(username=self.user.username, id=str(self.id))
+            self.id = None
+            return True
+        except Exception as e:
+            self.logger.debug(e.response.content)
+            return False
 
-    __str__ = __repr__ = lambda self: json.dumps(self.data)
+    def __repr__ (self):
+        return '\n<Public Key: user={0}>\n{1}'.format(
+            self.user.username,
+            json.dumps(self.data, indent=4)
+        )
+
+    __str__ = __repr__

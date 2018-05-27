@@ -387,7 +387,6 @@ class ReposService:
             index,
             repo,
             owner,
-            id,
             headers=None,
             query_params=None,
             content_type="application/json"):
@@ -397,8 +396,6 @@ class ReposService:
         """
         if query_params is None:
             query_params = {}
-
-        query_params['id'] = id
 
         uri = self.client.base_url + "/repos/" + owner + "/" + repo + "/issues/" + index + "/comments"
         return self.client.post(uri, data, headers, query_params, content_type)
@@ -639,23 +636,13 @@ class ReposService:
         uri = self.client.base_url + "/repos/" + owner + "/" + repo + "/labels"
         return self.client.post(uri, data, headers, query_params, content_type)
 
-    def issueDeleteMilestone(
-            self,
-            id,
-            repo,
-            owner,
-            body,
-            headers=None,
-            query_params=None,
-            content_type="application/json"):
+    def issueDeleteMilestone(self, id, repo, owner, headers=None, query_params=None, content_type="application/json"):
         """
         Delete a milestone
         It is method for DELETE /repos/{owner}/{repo}/milestones/{id}
         """
         if query_params is None:
             query_params = {}
-
-        query_params['body'] = body
 
         uri = self.client.base_url + "/repos/" + owner + "/" + repo + "/milestones/" + id
         return self.client.delete(uri, None, headers, query_params, content_type)
@@ -690,15 +677,13 @@ class ReposService:
         uri = self.client.base_url + "/repos/" + owner + "/" + repo + "/milestones/" + id
         return self.client.patch(uri, data, headers, query_params, content_type)
 
-    def issueGetMilestones(self, repo, owner, id, headers=None, query_params=None, content_type="application/json"):
+    def issueGetMilestones(self, repo, owner, headers=None, query_params=None, content_type="application/json"):
         """
         Get all of a repository's milestones
         It is method for GET /repos/{owner}/{repo}/milestones
         """
         if query_params is None:
             query_params = {}
-
-        query_params['id'] = id
 
         uri = self.client.base_url + "/repos/" + owner + "/" + repo + "/milestones"
         return self.client.get(uri, None, headers, query_params, content_type)

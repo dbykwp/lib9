@@ -23,6 +23,7 @@ class AdminService:
         """
         if query_params is None:
             query_params = {}
+
         uri = self.client.base_url + "/admin/users/" + username + "/keys"
         return self.client.post(uri, data, headers, query_params, content_type)
 
@@ -33,6 +34,7 @@ class AdminService:
         """
         if query_params is None:
             query_params = {}
+
         uri = self.client.base_url + "/admin/users/" + username + "/orgs"
         return self.client.post(uri, data, headers, query_params, content_type)
 
