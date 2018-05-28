@@ -17,6 +17,15 @@ class GiteaRepos(JSBASE):
     def new(self):
         return GiteaRepo(self.client, self.user)
 
+    def get(self, name, fetch=True):
+        r = self.new()
+        r.name = name
+        if fetch:
+            resp = self.user.client.api.repos.repoGet(repo=name, owner=self.user.username).json()
+            for k, v in resp.items():
+                setattr(r, k, v)
+        return r
+
     @property
     def owned(self):
         result = []
@@ -130,6 +139,17 @@ class GiteaRepos(JSBASE):
             return repo
         except Exception as e:
             self.logger.debug(e.response.content)
+
+    def search(
+            self,
+            query,
+            page_number=1,
+            page_size=150,
+            mode="",
+            exclusive=False
+    ):
+
+        return self.client.repos.search(query, page_number, page_size, mode, exclusive)
 
     def __next__(self):
         if self.position < len(self._items):

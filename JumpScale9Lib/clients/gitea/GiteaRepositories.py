@@ -1,24 +1,31 @@
-import requests
 from js9 import j
 
-from .GiteaUser import GiteaUser
 from .GiteaRepo import GiteaRepo
 
 JSBASE = j.application.jsbase_get_class()
 
 
-class GiteaRepositories(JSBASE):
+class GiteaReposForClient(JSBASE):
     def __init__(self, client, user):
         JSBASE.__init__(self)
         self.user = user
         self.client = client
 
-    def search(self, query, user_id=None, page_number=1, page_size=150, mode="", exclusive=False):
+    def search(
+        self,
+        query,
+        user_id=None,
+        page_number=1,
+        page_size=150,
+        mode="",
+        exclusive=False
+    ):
         if page_size > 150 or page_size <= 0:
             page_size = 150
 
         if mode not in ["fork", "source", "mirror", "collaborative"]:
-            return [], 'Only modes allowed [fork, source, mirror, collaborative]'
+            self.logger.error('Only modes allowed [fork, source, mirror, collaborative]')
+            return []
 
         result = []
         items = self.user.client.api.repos.repoSearch(
@@ -31,57 +38,39 @@ class GiteaRepositories(JSBASE):
         ).json()
 
         if not items['ok']:
-            return False, ''
+            self.logger.error('Response error')
+            return []
 
         for item in items['data']:
-            repo = GiteaRepo(self.user)
+            repo = GiteaRepo(self.client, None)
             for k, v in item.items():
                 setattr(repo, k, v)
+            # Search results are general, they don't have their proper user set
+            # so we fix this
+            u = self.client.users.new()
+            for k, v in repo.owner.items():
+                setattr(u, k, v)
+            repo.user = u
             result.append(repo)
         return result
 
-    def migrate(
-            self,
-            auth_username,
-            auth_password,
-            clone_addr,
-            repo_name,
-            uid,
-            description='',
-            mirror=True,
-            private=True
-    ):
-        d = {
-            'auth_username':auth_username,
-            'auth_password':auth_password,
-            'clone_addr':clone_addr,
-            'description':description,
-            'mirror':mirror,
-            'repo_name':repo_name,
-            'uid':uid,
-            'private': private
-        }
-        r = self.user.client.api.repos.repoMigrate(d).json()
-        repo = GiteaRepo(self.user)
-        for k, v in r.items():
-            setattr(repo, k, v)
-        return repo
+    def get(self, id):
+        r = GiteaRepo(self.client, user=None)
+        try:
+            resp = self.user.client.api.repositories.repoGetByID(id=str(id)).json()
 
-    def get(self, owner, repo, fetch=False):
-        user = GiteaUser(username=owner, client=self.user.client)
-        r = GiteaRepo(user)
-        r.name = repo
-        if fetch:
-            resp = self.user.client.api.repos.repoGet(repo=repo, owner=owner).json()
             for k, v in resp.items():
                 setattr(r, k, v)
-        return r
+            u = self.client.users.new()
+            for k, v in r.owner.items():
+                setattr(u, k, v)
+            r.user = u
+            return r
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.error('id not found')
+            else:
+                self.logger.error(e.response.content)
 
-    def get_by_id(self, id):
-        r = GiteaRepo(user=None)
-        resp = self.user.client.api.repositories.repoGetByID(id=str(id)).json()
-        for k, v in resp.items():
-            setattr(r, k, v)
-        return r
-
-    __str__ = __repr__ = lambda self: "Gitea Repos"
+    def __repr__ (self):
+        return "<General Repos finder and getter (by ID)>"
