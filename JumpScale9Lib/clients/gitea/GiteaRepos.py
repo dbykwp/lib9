@@ -1,7 +1,7 @@
-import requests
 from js9 import j
 
-from .GiteaRepo import GiteaRepo
+from .GiteaRepoForNonOwner import GiteaRepoForNonOwner
+from .GiteaRepoForOwner import GiteaRepoForOwner
 
 JSBASE = j.application.jsbase_get_class()
 
@@ -14,43 +14,64 @@ class GiteaRepos(JSBASE):
         self.client = client
         self.position = 0
 
-    def new(self):
-        return GiteaRepo(self.client, self.user)
+    def new(self, owner=True):
+        if owner:
+            return GiteaRepoForOwner(self.client, self.user)
+        return GiteaRepoForNonOwner(self.client, self.user)
 
     def get(self, name, fetch=True):
         r = self.new()
         r.name = name
         if fetch:
-            resp = self.user.client.api.repos.repoGet(repo=name, owner=self.user.username).json()
-            for k, v in resp.items():
-                setattr(r, k, v)
+            try:
+                resp = self.user.client.api.repos.repoGet(repo=name, owner=self.user.username).json()
+                for k, v in resp.items():
+                    setattr(r, k, v)
+            except Exception as e:
+                if e.response.status_code == 404:
+                    self.logger.error('repo does not exist')
+                else:
+                    self.logger.error(e.response.content)
+                return
         return r
 
     @property
     def owned(self):
         result = []
-        if self.user.is_current:
+
+        owner = self.user.is_current
+
+        if owner:
             items = self.user.client.api.user.userCurrentListRepos().json()
         else:
             items = self.user.client.api.users.userListRepos(username=self.user.username).json()
 
         for item in items:
-            repo = self.new()
+            repo = self.new(owner)
             for k, v in item.items():
                 setattr(repo, k, v)
             result.append(repo)
         return result
 
     @property
-    def stared(self):
+    def starred(self):
         result = []
+
         if self.user.is_current:
             items = self.user.client.api.user.userCurrentListStarred().json()
         else:
             items = self.user.client.api.users.userListStarred(username=self.user.username).json()
 
         for item in items:
-            repo = self.new()
+            if item['owner']['username'] == self.client.users.current.username:
+                repo = self.new()
+            else:
+                repo = self.new(owner=False)
+                u = self.client.users.new()
+                for k, v in item['owner'].items():
+                    setattr(u, k, v)
+                repo.user  = u
+
             for k, v in item.items():
                 setattr(repo, k, v)
             result.append(repo)
@@ -59,52 +80,25 @@ class GiteaRepos(JSBASE):
     @property
     def subscriptions(self):
         result = []
+
         if self.user.is_current:
             items = self.user.client.api.user.userCurrentListSubscriptions().json()
         else:
             items = self.user.client.api.users.userListSubscriptions(username=self.user.username).json()
 
         for item in items:
-            repo = self.new()
+            if item['owner']['username'] == self.client.users.current.username:
+                repo = self.new()
+            else:
+                repo = self.new(owner=False)
+                u = self.client.users.new()
+                for k, v in item['owner'].items():
+                    setattr(u, k, v)
+                repo.user = u
             for k, v in item.items():
                 setattr(repo, k, v)
             result.append(repo)
         return result
-
-    def star(self, owner, repo):
-        if not self.user.is_current:
-            self.logger.debug('Only current user can star repos')
-            return False
-        try:
-            self.user.client.api.user.userCurrentPutStar(data={}, owner=owner, repo=repo)
-        except Exception as e:
-            if e.response.status_code == 404:
-                self.logger.debug('Owner does not exist')
-                return False
-        return True
-
-    def unstar(self, owner, repo):
-        if not self.user.is_current:
-            self.logger.debug('Only current user can unstar repos')
-            return False
-        try:
-            self.user.client.api.user.userCurrentDeleteStar(owner=owner, repo=repo)
-        except Exception as e:
-            if e.response.status_code == 404:
-                self.logger.debug('Owner does not exist')
-                return False
-        return True
-
-    def has_starred(self, owner, repo):
-        if not self.user.is_current:
-            self.logger.debug('Only current user can check if a a repo is starred')
-        try:
-            self.user.client.api.user.userCurrentCheckStarring(owner=owner, repo=repo)
-        except Exception as e:
-            if e.response.status_code == 404:
-                self.logger.debug('Owner does not exist')
-                return False
-        return True
 
     def migrate(
             self,
@@ -143,19 +137,26 @@ class GiteaRepos(JSBASE):
     def search(
             self,
             query,
+            mode,
             page_number=1,
             page_size=150,
-            mode="",
-            exclusive=False
     ):
 
-        return self.client.repos.search(query, page_number, page_size, mode, exclusive)
+        return self.client.repos.search(query, mode, self.user.id, page_number, page_size, exclusive=True)
 
     def __next__(self):
+
         if self.position < len(self._items):
             item = self._items[self.position]
             self.position += 1
-            repo = self.new()
+            if item['owner']['username'] == self.client.users.current.username:
+                repo = self.new()
+            else:
+                repo = self.new(owner=False)
+                u = self.client.users.new()
+                for k, v in item['owner'].items():
+                    setattr(u, k, v)
+                repo.user = u
             for k, v in item.items():
                 setattr(repo, k, v)
             return repo

@@ -2,7 +2,8 @@ import json
 
 from js9 import j
 
-from .GiteaRepositories import GiteaRepositories
+from .GiteaReposForClient import GiteaReposForClient
+
 from .GiteaOrgs import GiteaOrgs
 from .GiteaMarkdowns import GiteaMarkdowns
 from .GiteaUsers import GiteaUsers
@@ -42,7 +43,7 @@ class GiteaClient(JSConfigBase):
         self.markdowns = GiteaMarkdowns(self)
         self.users = GiteaUsers(self)
         self.organizations = GiteaOrgs(client=self, user=self.users.current)
-        self.repos = GiteaRepositories(client=self, user=self.users.current)
+        self.repos = GiteaReposForClient(client=self, user=self.users.current)
 
     def config_check(self):
         """

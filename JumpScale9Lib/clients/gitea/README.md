@@ -1,716 +1,3 @@
-# Gitea client
-
-
-```python
-cl = j.clients.gitea.get()
-
-In [2]: cl
-Out[2]: {"version": "1.1.0+898-ge2e692ce", "current user": {"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}}
-
-In [4]: cl.version
-Out[4]: '1.1.0+898-ge2e692ce'
-
-In [8]: cl.markdowns.render(text='##### hi')
-Out[8]: b'<h5>hi</h5>\n'
-
-In [9]: cl.markdowns.render_raw(text='##### hi')
-Out[9]: b'<p>{&quot;body&quot;: &quot;##### hi&quot;}</p>\n'
-
-In [5]: cl.users
-Out[5]: {}
-
-In [6]: cl.users.current
-Out[6]: {"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}
-
-In [7]: cl.users.is_following('hamdy', 'ooo')
-Out[7]: True
-
-In [10]: users  = cl.users.search(query='ham', limit=1)
-
-In [11]: users
-Out[11]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-In [12]: for u in users:
-    ...:     print(u.username)
-    ...:
-hamdy
-
-# Don't fetch info from API (yet)
-# This is useful if you wan to call some API in `user` which only uses `username`
-# so no need to fetch whole user info from API
-
-In [2]: user  = cl.users.get(username='ooo')
-In [3]: user
-Out[3]: {"username": "ooo"}
-
-# Get actual user by actually fetching API
-In [5]: user  = cl.users.get(username='ooo', fetch=True)
-
-In [6]: user
-Out[6]: {"id": 84, "username": "ooo", "email": "ham@ham.com", "avatar_url": "https://secure.gravatar.com/avatar/547302594c1f80a224bf0638d04edfe3?d=identicon"}
-
-user = cl.users.get(username='non-existing', fetch=True)
-HTTPError: 404 Client Error: Not Found for url: http://172.17.0.2/api/v1/users/non-existing
-
-# follow/unfollow for current user (hamdy)
-In [9]: user = cl.users.get(username='hamdy')
-
-In [10]: user.is_following('ooo')
-Out[10]: False
-
-In [11]: user.follow('ooo')
-Out[11]: True
-
-In [12]: user.is_following('ooo')
-Out[12]: True
-
-In [13]: user.unfollow('ooo')
-Out[13]: True
-
-In [14]: user.is_following('ooo')
-Out[14]: False
-
-In [15]: user.is_following('non-existing')
-Out[15]: False
-
-In [16]: user.follow('non-existing')
-Out[16]: False
-
-In [17]: user.unfollow('non-existing')
-Out[17]: False
-
-In [24]: user.followers
-Out[24]: []
-
-In [25]: user.following
-Out[25]: [{"id": 85, "username": "sur", "email": "ds@sd.com", "avatar_url": "https://secure.gravatar.com/avatar/1f50397012d989d1440251dbffd93d1a?d=identicon"}]
-
-# for other users rather than current user we can't use follow/unfollow (they dont' exist) but we can list
-# followers / following
-
-In [26]: user = cl.users.get(username='sur')
-
-In [27]: user.followers
-Out[27]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-In [28]: user.following
-Out[28]: []
-
-In [30]: user.is_following('hamdy')
-Out[30]: False
-
-# create user (needs admin)
-
-In [3]: u = cl.users.new()
-In [4]: u.save(commit=False)
-Out[4]:
-(False,
- 'create Error {"password": "Missing", "username": "Missing", "email": "Missing"}')
-
-In [5]: u.save(commit=True)
-Out[5]:
-(False,
- 'create Error {"password": "Missing", "username": "Missing", "email": "Missing"}')
-
-In [6]: u.save()
-Out[6]:
-(False,
- 'create Error {"password": "Missing", "username": "Missing", "email": "Missing"}')
-
-In [7]: u.username = 'koko'
-
-In [8]: u.password='koko'
-
-In [9]: u.email = 'koko@e.com'
-
-In [10]: u.save()
-Out[10]: (True, '')
-
-In [11]: u
-Out[11]: {"id": 86, "username": "koko", "password": "koko", "email": "koko@e.com", "avatar_url": "https://secure.gravatar.com/avatar/ea2d566ac0193f7bf2deb74e41dde7b9?d=identicon"}
-
-In [13]: u.email="koko2@ee.com"
-
-In [14]: u.update()
-Out[14]: (True, '')
-
-In [15]: u.save()
-Out[15]: (False, 'create Error {"id": "Already existing"}')
-
-In [16]: u.delete()
-Out[16]: (True, '')
-
-# Trying to add an already existing user
-In [2]: u = cl.users.new()
-
-In [3]: u.username = 'hamdy'
-
-In [4]: u.email = 'er@dd.com'
-
-In [5]: u.password = '1234556'
-
-In [6]: u.save(commit=False)
-Out[6]: (True, '')
-
-In [7]: u.save()
-Out[7]: (False, 'user already exists [name: hamdy]')
-
-n [2]: x = cl.users.get(username='ooo', fetch=True)
-
-In [3]: x
-Out[3]: {"id": 84, "username": "ooo", "email": "ham@ham.com", "avatar_url": "https://secure.gravatar.com/avatar/547302594c1f80a224bf0638d04edfe3?d=identicon"}
-
-In [4]: k = x.keys.new()
-
-In [5]: k.title = "new_key2"
-
-In [6]: k.key="""ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDPeVIvpVYPVbrfc4+1P6mG/RTn5Z7RgsEkzPTKbjVfPQ7
-   ...: rvvCNYZykAWltOJVmPkfzOKVuGg0QhzP86gmqF+HzuGU1kNjKKq1jJuzdE0ld7HgYXIADXFeWPwnXtHP35sYsXczKYaq
-   ...: xdK8XYoVSFca2jypjw8bHwf/XBKFpYSn97Si8TvY3D/YM2E3e+oQokMFXWyx32I05X+1mhkzUzIZpoS02Zi2HgTJo9hO
-   ...: DFdidnRBUe1XI9s4Dife9wpCEbSxi6B1pMQp2LZ7YGxc111ue0LAC852fCmPqrF2OTVfW+4e6wLVJuM+udR1toTN3TdM
-   ...: XImYwpJ0pxKEFkGuQR4F/"""
-
-# Admin call is issued since user `ooo` is not the current user
-
-In [7]: k.save() # POST /api/v1/admin/users/ooo/keys 201
-Out[7]: (True, '')
-
-In [9]: for k in x.keys:print(k.title)
-new_key2
-new
-
-# Now adding key to current user
-In [10]: x = cl.users.get(username='hamdy')
-
-In [11]: k = x.keys.new()
-
-In [12]: k.title = "one"
-
-In [13]: k.key = """ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4IN8ZGDgdgDeul8h49yResQBfVI1wIFsleD+O8Y3Y
-    ...: TdYw97A9MgFZJcNGMOOs1vGXYlyzVT6+gCFADHyzpSCYjs82qn6UljjUNes0OyxmCnE1wuPCPIV7IuUkr9Zt+Ca3+hO
-    ...: AArQgs9X172mDj1vojLYg/ttBCNCvv1YH+khZSmSxdhgFICrUa2ROP98REwPG9vMl5KQzUnO8xnBUYHucLGPYn9stEC
-    ...: M81SQRTOK6hZPhok/38ymecL8NtFws47MeqkeD4k4tvB69LGYc3A1iXbnyghFp6tqjQ5s2H7EWkBU4v2jNnCQALWGJX
-    ...: 5mJpvEXMxkGbJgM8gUnCEKVCkP1"""
-
-
-In [14]: k.save() # POST /api/v1/user/keys
-Out[14]: (True, '')
-
-
-# Gnupg -- Key generation (shell)
-
-gpg --gen-key => use a real email address tied to existing account in gitea
-gpg --armor --export hamdy@greenitglobe.com > mykey.asc
-
-
-hamdy = cl.users.get('hamdy')
-k = hamdy.gpg_keys.new()
-k.public_key = """-----BEGIN PGP PUBLIC KEY BLOCK-----
-
-    ...: mQENBFry4K4BCAC9L/ULGqYxmC6Zuk2akcVWun1KnMo5vKiDJXthgUGruq6lA6pg
-    ...: MzEi0xKF0dtHGRZcB3xvu2CMhbtMddbE9S40kUoYkXUnuybyNF/lQGf+L92/oY7C
-    ...: s6QumvaFVIpudQ/A1t9PDeasWa4TwxMYmpdOiJbXR52qXcE6IEuOxsCriJFOLzHX
-    ...: Hg+ef0DjlsD85WeDz0Jmr8lr719e3zFgqGPbUX1SiDMlAZOPLef2jiqPHRUvNK/D
-    ...: OTSJi/76jB0bH77JKtgUClNEPg8rgAhhq+yQEbDI8iPEGFFEuxvdRZBX5B+pLCKK
-    ...: 6SiJ+OMskkjxu12Tzwdi61yRD9B9xx9cvyqPABEBAAG0HmhhbWR5IDxoYW1keUBn
-    ...: cmVlbml0Z2xvYmUuY29tPokBNwQTAQgAIQUCWvLgrgIbAwULCQgHAgYVCAkKCwIE
-    ...: FgIDAQIeAQIXgAAKCRDqdlHQGH7CWjYzB/48UmlZV4SToEYRofMk4p1yf+ULk0ww
-    ...: R9N4R3R+wE9MPO+yC51xiQtzY6lrEGY77/Dpu/aBGXaSNSX93GlVS4ilOEENH69g
-    ...: QelsLzKDFEXXySPPpTXXO8k5v+w77QH16dhgvHUzNBsx9WSY10d6vh9KyNw35lis
-    ...: yCz+bJrXfpU8QFIbgTvZ4cVKq9Nrd88iEIK/kePsdHR2qtSAXHwstOQx6lsL1zFc
-    ...: vaJaG+WataK2EpD2j9WYrdhNgU6VOeDKPSFWPqBt2n3znbgq58HNjhsaYPWWcppI
-    ...: iSOpriZxDlQPkK5nhdbEZEoEncpkDEWayr8NUu4JErlnd/BIE5CgQeLRuQENBFry
-    ...: 4K4BCADLV4XZ2golau1KGwPSeoz1onamxkUcijs0Cgi11mcQgYi94Llnehxj4U+O
-    ...: Azsp+pCz/3LUZfgjBNG0/CDu/0q2tHXqvE9On8VZAXgPFKhwmuieR6bpEDT4IX/9
-    ...: D+M4Ic9T2Gx+2Pyd+pJo/0qzEHpR1pW/66faEcePhr/asfh3tMJy5riuQu5c2hHE
-    ...: rkmRkLYKGITsGlJkE8kqha11zUZlYoSWPPwc38m/7FcZC4jLnBSE4h11tJ17x7s1
-    ...: HNwCe9tn8lU4wvcw7tUz7sGe/dFO+euW8HFm3kCHRVsWOgkI/zQgAV3u45exjwEi
-    ...: Yr1aOeT0H/yhpLW4jPHAIZiKR+fnABEBAAGJAR8EGAEIAAkFAlry4K4CGwwACgkQ
-    ...: 6nZR0Bh+wlo25Af/bOLGmh+GmBBBInKW3ANkx77Sj6WdV02vnsabgC2b/dt2sRM/
-    ...: Ldb1hYHjUpJXqA1+Dvl6F3dhLdEbFfx3RXU9PrnHeVDG8bmXsbnovszc2fd6RPTg
-    ...: 9XbsRMyedwsjL5XUI1RQGmPjaUVy2WneNbqGFHW2GnDtHrbo0IAnT0HQaWj1NjEK
-    ...: 66vb98uUpNk8p5K2y/6WhMA4kHYSCkLHe3FHK+ezvHB1XNOW8Sene2TvT5Jj/GA5
-    ...: wGJtbKyp2TO1rKSK2ALApVxs2vaFJ/RgDTEWn+qWDwtGfcU3wwhG+IhhYZi6ro4U
-    ...: W7giEuT+ZrCC3HBa1Ot2mYC8lIj1iJwreiHsPw==
-    ...: =aFOK
-    ...: -----END PGP PUBLIC KEY BLOCK-----
-    ...: """
-k.save()
-
-In [16]: [k for k in hamdy.gpg_keys]
-Out[16]: [{"id": 1, "can_encrypt_comms": true, "can_certify": true, "created_at": "2018-05-09T11:51:10Z", "can_sign": true, "emails": [{"email": "hamdy@greenitglobe.com", "verified": true}], "expires_at": "0001-01-01T00:00:00Z", "key_id": "EA7651D0187EC25A", "can_encrypt_storage": true, "primary_key_id": "                ", "public_key": "xsBNBFry4K4BCAC9L/ULGqYxmC6Zuk2akcVWun1KnMo5vKiDJXthgUGruq6lA6pgMzEi0xKF0dtHGRZcB3xvu2CMhbtMddbE9S40kUoYkXUnuybyNF/lQGf+L92/oY7Cs6QumvaFVIpudQ/A1t9PDeasWa4TwxMYmpdOiJbXR52qXcE6IEuOxsCriJFOLzHXHg+ef0DjlsD85WeDz0Jmr8lr719e3zFgqGPbUX1SiDMlAZOPLef2jiqPHRUvNK/DOTSJi/76jB0bH77JKtgUClNEPg8rgAhhq+yQEbDI8iPEGFFEuxvdRZBX5B+pLCKK6SiJ+OMskkjxu12Tzwdi61yRD9B9xx9cvyqPABEBAAE=", "subkeys": [{"id": 2, "primary_key_id": "EA7651D0187EC25A", "key_id": "E5C39437A273FF70", "public_key": "zsBNBFry4K4BCADLV4XZ2golau1KGwPSeoz1onamxkUcijs0Cgi11mcQgYi94Llnehxj4U+OAzsp+pCz/3LUZfgjBNG0/CDu/0q2tHXqvE9On8VZAXgPFKhwmuieR6bpEDT4IX/9D+M4Ic9T2Gx+2Pyd+pJo/0qzEHpR1pW/66faEcePhr/asfh3tMJy5riuQu5c2hHErkmRkLYKGITsGlJkE8kqha11zUZlYoSWPPwc38m/7FcZC4jLnBSE4h11tJ17x7s1HNwCe9tn8lU4wvcw7tUz7sGe/dFO+euW8HFm3kCHRVsWOgkI/zQgAV3u45exjwEiYr1aOeT0H/yhpLW4jPHAIZiKR+fnABEBAAE=", "emails": null, "subkeys": null, "can_sign": true, "can_encrypt_comms": true, "can_encrypt_storage": true, "can_certify": true, "created_at": "2018-05-09T11:51:10Z", "expires_at": "0001-01-01T00:00:00Z"}]}]
-
-
-# current User Tracked times (for all issues assigned)
-
-In [5]: cl = j.clients.gitea.get()
-In [6]: ham = cl.users.get('hamdy')
-In [7]: ham.issues.tracked_times()
-Out[7]: [<Gitea Issue time> for user <hamdy> {"id": 1, "created": "2018-05-11T22:56:09Z", "issue_id": 1, "time": 38, "user_id": 1}]
-
-# You can't use this for another use than current one
-In [2]: user = cl.users.get('ooo')
-In [3]: user.issues.tracked_times()
----------------------------------------------------------------------------
-Exception                                 Traceback (most recent call last)
-/usr/local/bin/js9 in <module>()
-----> 1 user.issues.tracked_times()
-
-/opt/code/github/jumpscale/lib9/JumpScale9Lib/clients/gitea/GiteaIssues.py in tracked_times(self)
-     20         result = []
-     21         if not self.user.is_current:
----> 22             raise Exception('You can not use this API call in behalf of another user')
-     23         resp = self.user.client.api.user.userCurrentTrackedTimes().json()
-     24         for item in resp:
-
-Exception: You can not use this API call in behalf of another user
-
-
-# Repos
-
-In [4]: user = cl.users.get('hamdy')
-
-In [5]: user.repos
-Out[5]: Gitea Repos for user: hamdy
-
-In [6]: user.repos.owned
-Out[6]: [{"id": 24, "clone_url": "http://172.17.0.2:3000/hamdy/toto.git", "full_name": "hamdy/toto", "created_at": "2018-05-09T12:50:12Z", "default_branch": "master", "empty": true, "html_url": "http://172.17.0.2:3000/hamdy/toto", "name": "toto", "open_issues_count": 1, "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}}]
-
-In [7]: user.repos.stared
-Out[7]: [{"id": 24, "clone_url": "http://172.17.0.2:3000/hamdy/toto.git", "full_name": "hamdy/toto", "created_at": "2018-05-09T12:50:12Z", "default_branch": "master", "empty": true, "html_url": "http://172.17.0.2:3000/hamdy/toto", "name": "toto", "open_issues_count": 1, "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}}]
-
-In [8]: user.repos.unstar('hamdy', 'toto')
-Out[8]: (True, '')
-
-In [9]: user.repos.stared
-Out[9]: []
-
-In [10]: user.repos.star('hamdy', 'toto')
-Out[10]: (True, '')
-
-In [11]: user.repos.stared
-Out[11]: [{"id": 24, "clone_url": "http://172.17.0.2:3000/hamdy/toto.git", "full_name": "hamdy/toto", "created_at": "2018-05-09T12:50:12Z", "default_branch": "master", "empty": true, "html_url": "http://172.17.0.2:3000/hamdy/toto", "name": "toto", "open_issues_count": 1, "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}}]
-
-In [12]: user.repos.has_starred('hamdy', 'toto')
-Out[12]: (True, '')
-
-In [13]: user.repos.subscriptions
-Out[13]: [{"id": 24, "clone_url": "http://172.17.0.2:3000/hamdy/toto.git", "full_name": "hamdy/toto", "created_at": "2018-05-09T12:50:12Z", "default_branch": "master", "empty": true, "html_url": "http://172.17.0.2:3000/hamdy/toto", "name": "toto", "open_issues_count": 1, "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}}]
-
-In [14]: user.repos.owned
-Out[14]: [{"id": 24, "clone_url": "http://172.17.0.2:3000/hamdy/toto.git", "full_name": "hamdy/toto", "created_at": "2018-05-09T12:50:12Z", "default_branch": "master", "empty": true, "html_url": "http://172.17.0.2:3000/hamdy/toto", "name": "toto", "open_issues_count": 1, "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}}]
-
-# organizations
-
-# for current user
-In [2]: ham = cl.users.get('hamdy')
-
-In [3]: ham.organizations
-Out[3]: Gitea Organizations Iterator for user: hamdy
-
-In [9]: [x for x in ham.organizations]
-Out[9]:
-[{"id": 87, "avatar_url": "http://172.17.0.2:3000/avatars/87", "username": "gigaya"},
- {"id": 88, "avatar_url": "http://172.17.0.2:3000/avatars/88", "username": "ss"}]
-
-# for another user
-In [10]: u = cl.users.get('ooo')
-
-In [11]: [x for x in u.organizations]
-Out[11]: []
-
-# org hooks
-
-
-In [1]: cl = j.clients.gitea.get()
-In [7]: [h for h in x.hooks]
-[Web hook {"id": 3, "created_at": "2018-05-13T00:16:34Z", "updated_at": "2018-05-13T00:16:34Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://kk.com", "config": {"url": "http://kk.com", "content_type": "json"}},
- Web hook {"id": 4, "created_at": "2018-05-13T00:26:37Z", "updated_at": "2018-05-13T00:26:37Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 5, "created_at": "2018-05-13T00:27:29Z", "updated_at": "2018-05-13T00:27:29Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 6, "created_at": "2018-05-13T00:28:34Z", "updated_at": "2018-05-13T00:28:34Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 7, "created_at": "2018-05-13T00:31:33Z", "updated_at": "2018-05-13T00:31:33Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 8, "created_at": "2018-05-13T00:33:31Z", "updated_at": "2018-05-13T00:33:31Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://ff.com", "config": {"url": "http://ff.com", "content_type": "json"}},
- Web hook {"id": 9, "created_at": "2018-05-13T00:34:56Z", "updated_at": "2018-05-13T00:34:56Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 10, "created_at": "2018-05-13T00:36:11Z", "updated_at": "2018-05-13T00:36:11Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
- Web hook {"id": 11, "created_at": "2018-05-13T00:38:06Z", "updated_at": "2018-05-13T00:38:06Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}}]
-
-
-In [9]: h = x.hooks.new()
-In [11]: h.url = 'http://sd.com'
-In [12]: h.type  = 'gitea'
-In [14]: h.events=['push']
-In [15]: h.save()
-Out[15]: (True, '')
-In [16]: h.update()
-Out[16]: (True, '')
-In [18]: h.delete()
-Out[18]: (True, '')
-
-
-# org members
-cl = j.clients.gitea.get()
-In [2]: x = cl.organizations.get('gigaya', fetch=True)
-In [3]: x.members
-Out[3]: Gitea Members Iterator for organization: gigaya
-
-In [4]: [x for x in x.members]
-Out[4]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-In [23]: x.members.unregister(username='hamdy')
-Out[23]:
-(False,
- b'{"message":"user is the last member of owner team [uid: 1]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}')
-
-
-In [24]: x.members.unregister(username='ha')
-Out[24]: (False, b'Not found')
-
-# assuming user ooo belongs to a team in the organization
-In [25]: x.members.unregister(username='ooo')
-Out[25]: (True, '')
-
-
-In [2]: x=cl.organizations.get('kk', fetch=True)
-
-In [3]: x.members.public
-Out[3]: []
-
-In [4]: x.members.publicize('hamdy')
-Out[4]: True
-
-In [5]: x.members.public
-Out[5]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-In [6]: x.members.conceal('hamdy')
-Out[6]: True
-
-In [7]: x.members.public
-Out[7]: []
-
-In [8]: x.members.is_public('hamdy')
-Out[8]: False
-
-# teams
-In [2]: x = cl.organizations.get('gigaya', fetch=True)
-
-In [3]: t = x.teams.new()
-
-In [4]: t.name = 'ee'
-
-In [5]: t.save()
-Out[5]:
-(False,
- b'{"message":"team already exists [org_id: 87, name: ee]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}')
-
-In [6]: t.name = 'eeee'
-
-In [6]: t.save()
-Out[6]: (False, 'create Error {"permission": "Missing"}')
-
-In [7]: t.permission = 'ss'
-
-In [8]: t.save()
-Out[8]:
-(False,
- 'create Error {"permission": "Only allowed [owner, admin, read, write]"}')
-
-In [9]: t.permission = 'admin'
-
-In [10]: t.save()
-Out[10]: (True, '')
-
-
-In [8]: t.update()
-Out[8]: (True, '')
-
-In [9]: t.delete()
-Out[9]: (True, '')
-
-# --
-
-In [2]: x=cl.organizations.get('kk', fetch=True)
-
-In [5]: t = x.teams.get(id=11)
-
-In [6]: t
-Out[6]: <Team> {"id": 11, "description": null, "name": null, "permission": null}
-
-In [7]: t.members
-Out[7]: Gitea Members Iterator for team: 11
-
-In [8]: [m for m in t.members]
-Out[8]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-
-In [2]: x = cl.organizations.get('gigaya', fetch=True)
-
-In [3]: t = x.teams.get(id=12)
-
-In [4]: t.members.add('ooo')
-Out[4]: (True, '')
-
-In [5]: [a for a in t.members]
-Out[5]:
-[{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"},
- {"id": 84, "username": "ooo", "email": "ham@ham.com", "avatar_url": "https://secure.gravatar.com/avatar/547302594c1f80a224bf0638d04edfe3?d=identicon"}]
-
-In [4]: t.members.remove('ooo')
-Out[4]: (True, '')
-
-In [5]: [a for a in t.members]
-Out[5]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
-
-# Repos
-
-In [4]: cl.repos.get_by_id(30)
-Out[4]: {"id": 30, "clone_url": "http://172.17.0.2:3000/hamdy/crm.git", "full_name": "hamdy/crm", "created_at": "2018-05-21T01:15:02Z", "default_branch": "master", "html_url": "http://172.17.0.2:3000/hamdy/crm", "mirror": true, "name": "crm", "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}, "size": 28, "watchers_count": 1, "ssh_url": "gitea@172.17.0.2:hamdy/crm.git"}
-
-
-r = cl.repos.migrate(clone_addr='https://github.com/hamdy/knn', auth_password='sfafefewfwef', auth_username='hamdy', repo_name='crm', uid=1)
-{'id': 27, 'owner': {'id': 1, 'login': 'hamdy', 'full_name': '', 'email': 'hamdy@greenitglobe.com', 'avatar_url': 'https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon', 'username': 'hamdy'}, 'name': 'crm', 'full_name': 'hamdy/crm', 'description': '', 'empty': False, 'private': True, 'fork': False, 'parent': None, 'mirror': True, 'size': 28, 'html_url': 'http://172.17.0.2:3000/hamdy/crm', 'ssh_url': 'gitea@172.17.0.2:hamdy/crm.git', 'clone_url': 'http://172.17.0.2:3000/hamdy/crm.git', 'website': '', 'stars_count': 0, 'forks_count': 0, 'watchers_count': 1, 'open_issues_count': 0, 'default_branch': 'master', 'created_at': '0001-01-01T00:00:00Z', 'updated_at': '0001-01-01T00:00:00Z', 'permissions': {'admin': True, 'push': True, 'pull': True}}
-
-x = cl.repos.get(owner='hamdy', repo='crm', fetch=True)
-Out[3]: {"id": 27, "clone_url": "http://172.17.0.2:3000/hamdy/crm.git", "full_name": "hamdy/crm", "created_at": "2018-05-19T14:55:15Z", "default_branch": "master", "html_url": "http://172.17.0.2:3000/hamdy/crm", "mirror": true, "name": "crm", "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}, "size": 28, "watchers_count": 1, "ssh_url": "gitea@172.17.0.2:hamdy/crm.git"}
-
-x = cl.repos.get(owner='hamdy', repo='toto', fetch=False)
-x.delete()
-(True, '')
-
-    # Branches
-In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
-
-In [3]: [a for a in x.branches]
-Out[3]: [Branch <{"id": null, "name": "master", "commit": {"id": "31dedf15579c31596911ac66aaf48abf0bd12c7a", "message": "Knn algorithm baic implementation and test\n", "url": "Not implemented", "author": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "committer": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "verification": {"verified": false, "reason": "gpg.error.not_signed_commit", "signature": "", "payload": ""}, "timestamp": "2016-01-23T19:46:26Z"}, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>]
-
-In [4]: x.branches.get(name='master')
-Out[4]: Branch <{"id": null, "name": null, "commit": null, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>
-
-In [5]: x.branches.get(name='master', fetch=True)
-Out[5]: Branch <{"id": null, "name": "master", "commit": {"id": "31dedf15579c31596911ac66aaf48abf0bd12c7a", "message": "Knn algorithm baic implementation and test\n", "url": "Not implemented", "author": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "committer": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "verification": {"verified": false, "reason": "gpg.error.not_signed_commit", "signature": "", "payload": ""}, "timestamp": "2016-01-23T19:46:26Z"}, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>
-
-    # collaborators
-In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
-
-In [3]: x.collaborators.is_collaborator('ooos')
-Out[3]: False
-
-In [4]: x.collaborators.is_collaborator('ooo')
-Out[4]: True
-
-In [5]: x.collaborators.remove('ooo')
-Out[5]: (True, '')
-
-In [6]: x.collaborators.is_collaborator('ooo')
-Out[6]: False
-
-In [7]: x.collaborators.add('ooo')
-Out[7]: (True, '')
-
-In [8]: x.collaborators.remove('ooo')
-Out[8]: True
-
-In [9]: x.collaborators.is_collaborator('ooo')
-Out[9]: False
-
-
-    # Repo Hooks
-
-x = cl.repos.get(owner='hamdy', repo='crm')
-In [3]: [h for h in x.hooks]
-Out[4]: [Web hook {"id": 15, "created_at": "2018-05-21T09:52:20Z", "updated_at": "2018-05-21T09:52:20Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://dd.com", "config": {"url": "http://dd.com", "content_type": "json"}}]
-
-n [2]: x = cl.repos.get(owner='hamdy', repo='crm')
-
-In [3]: h = x.hooks.new()
-
-In [4]: h.type  = 'gitea'
-
-In [5]: h.url = 'http://sd.com'
-
-In [6]: h.events=['push']
-
-In [7]: h.save()
-Out[7]: (True, '')
-
-In [8]: h.update()
-Out[8]: (True, '')
-
-    # Repo Keys
-
-In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
-
-In [3]: x.keys
-Out[3]: PublicKeys Iterator for repo: crm
-
-In [4]: [a for a in x.keys]
-Out[4]: []
-
-In [5]: k = x.keys.new()
-
-In [6]: k.key = """ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoxqC1QNqEJculbDP7wRI3PRtn6yoNo52HbYty9swIjg
-   ...: 1OqdrDstgw0FKwe9OBYjZpYXCPnyieQ4d3O26Xc4Rc+w88diJKPanlDZV5BpOvbu0NwvAJbxhqz1Ca25KETllBhH30HMl
-   ...: yZGoc2uFWZpw8y9zNFl384TBWLwMD3aUQ2XejVdZxCC7u3CTZU6sQgKipk76t9USgyKpRLkanUUV2OV3WIeLbA4/zr71Q
-   ...: u9IEaxNMLPD3JBZummcERJjJksHbOdybXiEqGMDeSDj5WGxulsVwYhBaTOUxeuf9UErKh/H2HuyCxSj8JaihHNgyiV5gw
-   ...: JNED9fo/ktqk4rb43np root@js"""
-
-In [7]: k.title = "new_key"
-
-In [8]: k.save()
-Out[8]: (True, '')
-
-In [9]: [a for a in x.keys]
-Out[9]: [{"id": 1, "key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoxqC1QNqEJculbDP7wRI3PRtn6yoNo52HbYty9swIjg1OqdrDstgw0FKwe9OBYjZpYXCPnyieQ4d3O26Xc4Rc+w88diJKPanlDZV5BpOvbu0NwvAJbxhqz1Ca25KETllBhH30HMlyZGoc2uFWZpw8y9zNFl384TBWLwMD3aUQ2XejVdZxCC7u3CTZU6sQgKipk76t9USgyKpRLkanUUV2OV3WIeLbA4/zr71Qu9IEaxNMLPD3JBZummcERJjJksHbOdybXiEqGMDeSDj5WGxulsVwYhBaTOUxeuf9UErKh/H2HuyCxSj8JaihHNgyiV5gwJNED9fo/ktqk4rb43np root@js", "title": "new_key", "created_at": "2018-05-21T10:17:51Z", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/crm/keys/1"}]
-In [4]: k.delete()
-Out[4]: (True, '')
-
-In [5]: [a for a in x.keys]
-Out[5]: []
-
-In [2]: x = cl.repos.get(owner='hamdy2', repo='repo', fetch=True)
-
-In [3]: pr = x.pull_requests.get(1, fetch=True)
-
-In [4]: pr = x.pull_requests.get(2, fetch=True)
-
-In [5]: pr.merged
-Out[5]: False
-
-In [6]: pr.merge()
-Out[6]: True
-
-# Get raw file
-In [9]: x = cl.repos.get(owner='hamdy', repo='crm')
-In [9]: x.get_file('master/knn.py')
-
-    # issues
-n [2]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [3]: issue = x.issues.new()
-
-In [4]: issue.title = 'ui'
-
-In [5]: issue.body = 'ui'
-
-In [6]: issue.save()
-Out[6]: (True, '')
-
-In [7]: issue.id
-Out[7]: 3
-
-In [8]: issue.title = 'ui ui '
-
-In [9]: issue.update()
-Out[9]: (True, '')
-
-In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [3]: [a for a in x.issues]
-Out[3]:
-[{"id": 4, "assignee": null, "assignees": [], "body": "scsc", "due_date": null, "labels": [], "milestone": null, "title": "sdsd", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/17", "updated_at": "2018-05-22T12:03:59Z"},
- {"id": 2, "assignee": null, "assignees": [], "body": "rt", "due_date": null, "labels": [], "milestone": null, "title": "rt", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/15", "updated_at": "2018-05-22T11:19:24Z"},
- {"id": 1, "assignee": null, "assignees": [], "body": "rt", "due_date": null, "labels": [], "milestone": null, "title": "rt", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/14", "updated_at": "2018-05-22T11:18:40Z"}]
-
-In [4]: x.issues.list(page=1, state='closed')
-Out[4]: [{"id": 3, "assignee": null, "assignees": [], "body": "ui", "due_date": null, "labels": [], "milestone": null, "title": "ui ui ", "state": "closed", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/16", "updated_at": "2018-05-22T11:39:13Z"}]
-
-
-In [6]: x.issues.get('3', fetch=True)
-Out[6]: {"id": 3, "assignee": null, "assignees": [], "body": "ui", "due_date": null, "labels": [], "milestone": null, "title": "ui ui ", "state": "closed", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/16", "updated_at": "2018-05-22T11:39:13Z"}
-
-In [7]: i = x.issues.get('3', fetch=True)
-
-In [8]: i.title = 'yy'
-
-In [9]: i.update()
-Out[9]: (True, '')
-
-# issue commnets
-In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [3]: i = x.issues.get('3', fetch=True)
-
-In [4]: [c for c in i.issue_comments][0]
-Out[4]: Comment {"id": 23, "created_at": "2018-05-23T08:55:11Z", "pull_request_url": "", "html_url": "http://172.17.0.2:3000/hamdy/koko/issues/3#issuecomment-23", "body": "asascsac"}
-
-In [5]: [c for c in i.issue_comments]
-Out[5]: [Comment {"id": 23, "created_at": "2018-05-23T08:55:11Z", "pull_request_url": "", "html_url": "http://172.17.0.2:3000/hamdy/koko/issues/3#issuecomment-23", "body": "asascsac"}]
-
-In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [3]: i = x.issues.get('3', fetch=True)
-
-In [4]: ii = i.issue_comments.new()
-
-In [5]: ii.body = 'niahaha'
-
-In [6]: ii.save()
-Out[6]: (True, '')
-
-In [7]: ii.body = 'niaaaaaaaaaaaaaaaaaaaaaaah'
-
-In [8]: ii.update()
-Out[8]: (True, '')
-
-In [9]: ii.delete()
-Out[10]: (True, '')
-
-# repo milestones
-In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [3]: [m for m in x.milestones]
-Out[3]:
-[Milestone {"id": 196, "closed_at": null, "closed_issues": 0, "description": "kjjhhhhhhhh", "due_on": null, "open_issues": 0, "title": "milaya"},
- Milestone {"id": 197, "closed_at": null, "closed_issues": 0, "description": "", "due_on": null, "open_issues": 0, "title": "lll"}]
-
-In [4]: ms = x.milestones.new()
-
-In [5]: ms.title = 'aaaa'
-
-In [6]: ms.save()
-Out[6]: (True, '')
-
-In [7]: ms.title = 'bbb'
-
-In [8]: ms.update()
-Out[8]: (True, '')
-
-In [9]: ms.delete()
-Out[9]: (True, '')
-
-# repo labels
-
-In [17]: x = cl.repos.get(owner='hamdy', repo='koko')
-
-In [18]: [a for a in x.labels]
-Out[18]:
-[Label {"id": 125, "name": "bug", "color": "ee0701"},
- Label {"id": 126, "name": "duplicate", "color": "cccccc"},
- Label {"id": 127, "name": "enhancement", "color": "84b6eb"},
- Label {"id": 128, "name": "help wanted", "color": "128a0c"},
- Label {"id": 129, "name": "invalid", "color": "e6e6e6"},
- Label {"id": 130, "name": "question", "color": "cc317c"},
- Label {"id": 131, "name": "wontfix", "color": "ffffff"}]
-
-
-In [5]: label = x.labels.new()
-In [27]: label.name = 'label'
-In [30]: label.color = '#244d12'
-
-In [31]: label.save()
-Out[31]: (True, '')
-
-In [32]: label.update()
-Out[32]: (True, '')
-
-In [33]: label.delete()
-Out[33]: (True, '')
-
-In [35]: x.labels.get('125', fetch=True)
-Out[35]: Label {"id": 125, "name": "bug", "color": "ee0701"}
-
-```
-
-
 **Get Gitea Client**
 ```
 
@@ -736,7 +23,6 @@ In [8]: cl.markdowns.render_raw(text="##This is header")
 Out[8]: b'<p>{&quot;body&quot;: &quot;##This is header&quot;}</p>\n'
 
 ```
-
 
 ### Users Manager
 
@@ -822,7 +108,7 @@ Out[7]: False
 
 ```
 
-**Getting a user / Search**
+**Search**
 
 ```
 In [4]: cl.users
@@ -834,17 +120,6 @@ Out[2]: False
 
 In [3]: cl.users.is_following('hamdy', 'ooo')
 Out[3]: True
-
-In [5]: cl.users.get(username='hamdy2')
-Out[5]:
-
-<User>
-{
-    "id": 90,
-    "username": "hamdy2",
-    "email": "jh@we.com",
-    "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon"
-}
 
 In [2]: cl.users.search(query='ham')
 Out[2]:
@@ -875,6 +150,21 @@ Out[3]:
      "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"
  }]
 
+```
+
+**Get a user by username**
+
+```
+In [5]: cl.users.get(username='hamdy2')
+Out[5]:
+
+<User>
+{
+    "id": 90,
+    "username": "hamdy2",
+    "email": "jh@we.com",
+    "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon"
+}
 ```
 
 **Admin Operations**
@@ -1315,153 +605,40 @@ Out[14]:
 
 ```
 
-**User Repos**
+### Repo Manager
+
 ```
-In [3]: cl.users.current.repos
-Out[3]: <Repos Iterator for user: hamdy>
+In [8]: cl.repos
+Out[8]: <General Repos finder and getter (by ID)>
+```
 
-In [4]: [r for r in cl.users.current.repos]
-Out[4]: []
+**Search(name, mode, page_number=1, page_size=150, exclusive=False)**  *modes=("fork", "source", "mirror", "collaborative")*
 
-In [5]: [r for r in cl.users.current.repos]
-Out[5]:
-[
- <Repo name=soso>
- {
-     "id": 34,
-     "clone_url": "http://172.17.0.2:3000/hamdy/soso.git",
-     "full_name": "hamdy/soso",
-     "created_at": "2018-05-27T01:12:47Z",
-     "default_branch": "master",
-     "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy/soso",
-     "name": "soso",
-     "owner": {
-         "id": 1,
-         "login": "hamdy",
-         "full_name": "",
-         "email": "hamdy@greenitglobe.com",
-         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
-         "username": "hamdy"
-     },
-     "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy/soso.git"
- }]
+```
+        # search user repos
+        repos = cl.users.get('hamdy2').repos.search('koko', mode='source')
+# OR
+        # search all repos
 
-# For another user
+# Warning currently they produce same results (no idea why)
 
-In [7]: u = cl.users.get('hamdy2')
+In [3]: repos = cl.repos.search('koko', mode='source')
 
-In [8]: u.repos
-Out[8]: <Repos Iterator for user: hamdy2>
 
-In [9]: [a for a in u.repos]
-Out[9]: []
-
-# Create repo for another user (requires admin permissions)
-
-In [2]: u = cl.users.get('hamdy2')
-In [3]: repo = u.repos.new()
-In [4]: repo.name = 'lolo'
-In [5]: repo.save()
-
-# create repo for current user (no admin permissions required)
-In [2]: repo = cl.users.current.repos.new()
-In [3]: repo.name = 'repoooo'
-In [4]: repo.save()
-
-# Only current user can star/unstar check for starred
-In [2]: repos = cl.users.get('hamdy').repos
-
-In [3]: repos.star('hamdy2', 'lolo')
-Out[3]: True
-
-In [4]: repos.stared
+In [4]: repos
 Out[4]:
 [
- <Repo name=lolo>
+ <Repo: owned by current user: hamdy>
  {
-     "id": 36,
-     "clone_url": "http://172.17.0.2:3000/hamdy2/lolo.git",
-     "full_name": "hamdy2/lolo",
-     "created_at": "2018-05-27T01:21:41Z",
+     "id": 38,
+     "clone_url": "http://172.17.0.2:3000/hamdy/koko.git",
+     "description": "This repo is owner by user hamdy, the admin and the current gitea client user",
+     "full_name": "hamdy/koko",
+     "created_at": "2018-06-02T14:42:22Z",
      "default_branch": "master",
      "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy2/lolo",
-     "name": "lolo",
-     "owner": {
-         "id": 90,
-         "login": "hamdy2",
-         "full_name": "",
-         "email": "jh@we.com",
-         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
-         "username": "hamdy2"
-     },
-     "stars_count": 1,
-     "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy2/lolo.git"
- }]
-
-
-In [5]: repos.unstar('hamdy2', 'lolo')
-Out[5]: True
-
-In [6]: repos.stared
-Out[6]: []
-
-In [7]: repos = cl.users.get('hamdy2').repos
-
-In [8]: repos.star('hamdy', 'repoooo')
-[Sun27 01:57] - GiteaRepos.py     :67  :j.gitearepos         - DEBUG    - Only current user can star their own repos
-Out[8]: False
-
-In [6]: repos.has_starred('hamdy', 'repoooo')
-[Sun27 08:35] - GiteaRepos.py     :91  :j.gitearepos         - DEBUG    - Only current user can check if a a repo is starred
-[Sun27 08:35] - GiteaRepos.py     :96  :j.gitearepos         - DEBUG    - Owner does not exist
-Out[6]: False
-
-# You can list user starred repos, subscriptions
-In [5]: repos = cl.users.get('hamdy').repos
-
-In [6]: repos.stared
-Out[6]:
-[
- <Repo name=repoooo>
- {
-     "id": 37,
-     "clone_url": "http://172.17.0.2:3000/hamdy/repoooo.git",
-     "full_name": "hamdy/repoooo",
-     "created_at": "2018-05-27T01:25:53Z",
-     "default_branch": "master",
-     "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy/repoooo",
-     "name": "repoooo",
-     "owner": {
-         "id": 1,
-         "login": "hamdy",
-         "full_name": "",
-         "email": "hamdy@greenitglobe.com",
-         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
-         "username": "hamdy"
-     },
-     "stars_count": 1,
-     "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy/repoooo.git"
- }]
-
-In [7]: repos.subscriptions
-Out[7]:
-[
- <Repo name=soso>
- {
-     "id": 34,
-     "clone_url": "http://172.17.0.2:3000/hamdy/soso.git",
-     "full_name": "hamdy/soso",
-     "created_at": "2018-05-27T01:12:47Z",
-     "default_branch": "master",
-     "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy/soso",
-     "name": "soso",
+     "html_url": "http://172.17.0.2:3000/hamdy/koko",
+     "name": "koko",
      "owner": {
          "id": 1,
          "login": "hamdy",
@@ -1471,9 +648,9 @@ Out[7]:
          "username": "hamdy"
      },
      "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy/soso.git"
+     "ssh_url": "gitea@172.17.0.2:hamdy/koko.git"
  },
- <Repo name=koko>
+ <Repo>
  {
      "id": 35,
      "clone_url": "http://172.17.0.2:3000/hamdy2/koko.git",
@@ -1493,37 +670,153 @@ Out[7]:
      },
      "watchers_count": 1,
      "ssh_url": "gitea@172.17.0.2:hamdy2/koko.git"
- },
- <Repo name=lolo>
+ }]
+
+In [6]: repos[0].user
+Out[6]:
+
+<Current User>
+{
+    "id": 1,
+    "username": "hamdy",
+    "password": null,
+    "full_name": "",
+    "login_name": null,
+    "source_id": null,
+    "send_notify": null,
+    "email": "hamdy@greenitglobe.com",
+    "active": null,
+    "admin": null,
+    "allow_git_hook": false,
+    "allow_import_local": false,
+    "location": null,
+    "max_repo_creation": null,
+    "website": null,
+    "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"
+}
+
+In [7]: repos[1].user
+Out[7]:
+
+<User>
+{
+    "id": 90,
+    "username": "hamdy2",
+    "password": null,
+    "full_name": "",
+    "login_name": null,
+    "source_id": null,
+    "send_notify": null,
+    "email": "jh@we.com",
+    "active": null,
+    "admin": null,
+    "allow_git_hook": false,
+    "allow_import_local": false,
+    "location": null,
+    "max_repo_creation": null,
+    "website": null,
+    "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon"
+}
+
+```
+
+**Get repo by ID**
+
+```
+In [4]: cl.repos.get(38)
+Out[4]:
+
+<Repo: owned by current user: hamdy>
+{
+    "id": 38,
+    "clone_url": "http://172.17.0.2:3000/hamdy/koko.git",
+    "description": "This repo is owner by user hamdy, the admin and the current gitea client user",
+    "full_name": "hamdy/koko",
+    "created_at": "2018-06-02T14:42:22Z",
+    "default_branch": "master",
+    "empty": true,
+    "html_url": "http://172.17.0.2:3000/hamdy/koko",
+    "name": "koko",
+    "owner": {
+        "id": 1,
+        "login": "hamdy",
+        "full_name": "",
+        "email": "hamdy@greenitglobe.com",
+        "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+        "username": "hamdy"
+    },
+    "stars_count": 1,
+    "watchers_count": 1,
+    "ssh_url": "gitea@172.17.0.2:hamdy/koko.git"
+}
+
+In [5]: cl.repos.get(35)
+Out[5]:
+
+<Repo>
+{
+    "id": 35,
+    "clone_url": "http://172.17.0.2:3000/hamdy2/koko.git",
+    "full_name": "hamdy2/koko",
+    "created_at": "2018-05-27T01:15:59Z",
+    "default_branch": "master",
+    "empty": true,
+    "html_url": "http://172.17.0.2:3000/hamdy2/koko",
+    "name": "koko",
+    "owner": {
+        "id": 90,
+        "login": "hamdy2",
+        "full_name": "",
+        "email": "jh@we.com",
+        "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+        "username": "hamdy2"
+    },
+    "watchers_count": 1,
+    "ssh_url": "gitea@172.17.0.2:hamdy2/koko.git"
+}
+
+```
+
+**User Repos**
+```
+In [3]: cl.users.current.repos
+Out[3]: <Repos Iterator for user: hamdy>
+
+In [7]: [r for r in cl.users.current.repos]
+Out[7]:
+[
+ <Repo: owned by current user: hamdy>
  {
-     "id": 36,
-     "clone_url": "http://172.17.0.2:3000/hamdy2/lolo.git",
-     "full_name": "hamdy2/lolo",
-     "created_at": "2018-05-27T01:21:41Z",
+     "id": 38,
+     "clone_url": "http://172.17.0.3:3000/hamdy/koko.git",
+     "description": "This repo is owner by user hamdy, the admin and the current gitea client user",
+     "full_name": "hamdy/koko",
+     "created_at": "2018-06-02T14:42:22Z",
      "default_branch": "master",
      "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy2/lolo",
-     "name": "lolo",
+     "html_url": "http://172.17.0.3:3000/hamdy/koko",
+     "name": "koko",
      "owner": {
-         "id": 90,
-         "login": "hamdy2",
+         "id": 1,
+         "login": "hamdy",
          "full_name": "",
-         "email": "jh@we.com",
-         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
-         "username": "hamdy2"
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
      },
+     "stars_count": 1,
      "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy2/lolo.git"
+     "ssh_url": "gitea@172.17.0.3:hamdy/koko.git"
  },
- <Repo name=repoooo>
+ <Repo: owned by current user: hamdy>
  {
      "id": 37,
-     "clone_url": "http://172.17.0.2:3000/hamdy/repoooo.git",
+     "clone_url": "http://172.17.0.3:3000/hamdy/repoooo.git",
      "full_name": "hamdy/repoooo",
      "created_at": "2018-05-27T01:25:53Z",
      "default_branch": "master",
      "empty": true,
-     "html_url": "http://172.17.0.2:3000/hamdy/repoooo",
+     "html_url": "http://172.17.0.3:3000/hamdy/repoooo",
      "name": "repoooo",
      "owner": {
          "id": 1,
@@ -1535,10 +828,808 @@ Out[7]:
      },
      "stars_count": 1,
      "watchers_count": 1,
-     "ssh_url": "gitea@172.17.0.2:hamdy/repoooo.git"
+     "ssh_url": "gitea@172.17.0.3:hamdy/repoooo.git"
+ },
+ <Repo: owned by current user: hamdy>
+ {
+     "id": 34,
+     "clone_url": "http://172.17.0.3:3000/hamdy/soso.git",
+     "full_name": "hamdy/soso",
+     "created_at": "2018-05-27T01:12:47Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy/soso",
+     "name": "soso",
+     "owner": {
+         "id": 1,
+         "login": "hamdy",
+         "full_name": "",
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy/soso.git"
  }]
 
-In [8]:
+
+# For another user
+
+In [2]: u = cl.users.get('hamdy2')
+
+In [3]: u.repos
+Out[3]: <Repos Iterator for user: hamdy2>
+
+In [4]: [a for a in u.repos]
+Out[4]:
+[
+ <Repo>
+ {
+     "id": 36,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/lolo.git",
+     "full_name": "hamdy2/lolo",
+     "created_at": "2018-05-27T01:21:41Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/lolo",
+     "name": "lolo",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/lolo.git"
+ },
+ <Repo>
+ {
+     "id": 35,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/koko.git",
+     "full_name": "hamdy2/koko",
+     "created_at": "2018-05-27T01:15:59Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/koko",
+     "name": "koko",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/koko.git"
+ }]
+```
+
+**Create repo for another user (requires admin permissions)**
+
+```
+In [2]: u = cl.users.get('hamdy2')
+In [3]: repo = u.repos.new()
+In [5]: repo.name = 'lolo'
+
+In [6]: repo.save()
+[Sat02 15:49] - GiteaRepo.py      :176 :j.gitearepoforowner  - ERROR    - b'{"message":"repository already exists [uname: hamdy2, name: lolo]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}'
+Out[6]: False
+
+In [7]: repo.name = 'dodo'
+
+In [8]: repo.save()
+Out[8]: True
+
+
+# create repo for current user (no admin permissions required)
+
+In [9]: repo = cl.users.current.repos.new()
+
+In [10]: repo.name = 'repoooo'
+
+In [11]: repo.save()
+[Sat02 15:50] - GiteaRepo.py      :176 :j.gitearepoforowner  - ERROR    - b'{"message":"repository already exists [uname: hamdy, name: repoooo]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}'
+Out[11]: False
+
+In [12]: repo.name = 'new'
+
+In [13]: repo.save()
+Out[13]: True
+
+```
+
+**Starring**
+
+```
+In [3]: hamdy2 = cl.users.get('hamdy2')
+
+In [4]: curr = cl.users.current
+
+In [5]: curr.repos.starred
+Out[5]: []
+
+In [6]: repo = hamdy2.repos.get('dodo')
+
+In [7]: repo.is_starred_by_current_user
+Out[7]: False
+
+In [8]: repo.unstar()
+Out[8]: True
+
+In [9]: repo.star()
+Out[9]: True
+
+In [10]: repo.star()
+Out[10]: True
+
+In [11]: repo.is_starred_by_current_user()
+Out[11]: True
+
+In [12]: curr.repos.stared
+Out[12]:
+[
+ <Repo>
+ {
+     "id": 39,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/dodo.git",
+     "full_name": "hamdy2/dodo",
+     "created_at": "2018-06-02T15:49:17Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/dodo",
+     "name": "dodo",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "stars_count": 1,
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/dodo.git"
+ }]
+```
+
+**Subscriptions**
+
+```
+In [13]: curr.repos.subscriptions
+Out[13]:
+[
+ <Repo: owned by current user: hamdy>
+ {
+     "id": 34,
+     "clone_url": "http://172.17.0.3:3000/hamdy/soso.git",
+     "full_name": "hamdy/soso",
+     "created_at": "2018-05-27T01:12:47Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy/soso",
+     "name": "soso",
+     "owner": {
+         "id": 1,
+         "login": "hamdy",
+         "full_name": "",
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy/soso.git"
+ },
+ <Repo>
+ {
+     "id": 35,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/koko.git",
+     "full_name": "hamdy2/koko",
+     "created_at": "2018-05-27T01:15:59Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/koko",
+     "name": "koko",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/koko.git"
+ },
+ <Repo>
+ {
+     "id": 36,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/lolo.git",
+     "full_name": "hamdy2/lolo",
+     "created_at": "2018-05-27T01:21:41Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/lolo",
+     "name": "lolo",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/lolo.git"
+ },
+ <Repo: owned by current user: hamdy>
+ {
+     "id": 37,
+     "clone_url": "http://172.17.0.3:3000/hamdy/repoooo.git",
+     "full_name": "hamdy/repoooo",
+     "created_at": "2018-05-27T01:25:53Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy/repoooo",
+     "name": "repoooo",
+     "owner": {
+         "id": 1,
+         "login": "hamdy",
+         "full_name": "",
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy/repoooo.git"
+ },
+ <Repo: owned by current user: hamdy>
+ {
+     "id": 38,
+     "clone_url": "http://172.17.0.3:3000/hamdy/koko.git",
+     "description": "This repo is owner by user hamdy, the admin and the current gitea client user",
+     "full_name": "hamdy/koko",
+     "created_at": "2018-06-02T14:42:22Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy/koko",
+     "name": "koko",
+     "owner": {
+         "id": 1,
+         "login": "hamdy",
+         "full_name": "",
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy/koko.git"
+ },
+ <Repo>
+ {
+     "id": 39,
+     "clone_url": "http://172.17.0.3:3000/hamdy2/dodo.git",
+     "full_name": "hamdy2/dodo",
+     "created_at": "2018-06-02T15:49:17Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy2/dodo",
+     "name": "dodo",
+     "owner": {
+         "id": 90,
+         "login": "hamdy2",
+         "full_name": "",
+         "email": "jh@we.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/f08f0fa33c500694089a0359f3692490?d=identicon",
+         "username": "hamdy2"
+     },
+     "stars_count": 1,
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy2/dodo.git"
+ },
+ <Repo: owned by current user: hamdy>
+ {
+     "id": 40,
+     "clone_url": "http://172.17.0.3:3000/hamdy/new.git",
+     "full_name": "hamdy/new",
+     "created_at": "2018-06-02T15:50:32Z",
+     "default_branch": "master",
+     "empty": true,
+     "html_url": "http://172.17.0.3:3000/hamdy/new",
+     "name": "new",
+     "owner": {
+         "id": 1,
+         "login": "hamdy",
+         "full_name": "",
+         "email": "hamdy@greenitglobe.com",
+         "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+         "username": "hamdy"
+     },
+     "watchers_count": 1,
+     "ssh_url": "gitea@172.17.0.3:hamdy/new.git"
+ }]
+```
+
+
+**Repo Migrations**
+
+```
+In [14]: curr.repos.migrate('hamdy', 'my-secret', 'https://github.com/hamdy/knn', 'knn')
+Out[14]:
+
+<Repo: owned by current user: hamdy>
+{
+    "id": 41,
+    "clone_url": "http://172.17.0.3:3000/hamdy/knn.git",
+    "full_name": "hamdy/knn",
+    "created_at": "0001-01-01T00:00:00Z",
+    "default_branch": "master",
+    "html_url": "http://172.17.0.3:3000/hamdy/knn",
+    "mirror": true,
+    "name": "knn",
+    "owner": {
+        "id": 1,
+        "login": "hamdy",
+        "full_name": "",
+        "email": "hamdy@greenitglobe.com",
+        "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon",
+        "username": "hamdy"
+    },
+    "size": 28,
+    "watchers_count": 1,
+    "ssh_url": "gitea@172.17.0.3:hamdy/knn.git"
+}
+
+```
+
+**Repo Download**
+
+```
+In [2]: curr = cl.users.current
+
+In [3]: knn = curr.repos.get('knn')
+
+In [4]: knn.download(dir='/tmp/knn', type='tar.gz')
+Out[4]: True
+
+In [5]: knn.download(dir='/tmp/knn', branch='master', type='tar.gz')
+Out[5]: True
+
+In [6]: knn.download(dir='/tmp/knn', branch='master', type='zip')
+Out[6]: True
+
+In [7]: knn.download(dir='/tmp/knn') # master.zip
+Out[7]: True
+```
+
+**Download single file**
+```
+In [2]: curr = cl.users.current
+
+In [3]: knn = curr.repos.get('knn')
+
+In [4]: knn.download_file(destination_dir='/tmp/downloads', filename='knn.py', branch='master')
+Out[4]: True
+
+In [5]: knn.download_file(destination_dir='/tmp/downloads', filename='knn.py') # download from master
+   ...:
+Out[5]: True
+
+```
+
+--
+
+
+```python
+# organizations
+
+# for current user
+In [2]: ham = cl.users.get('hamdy')
+
+In [3]: ham.organizations
+Out[3]: Gitea Organizations Iterator for user: hamdy
+
+In [9]: [x for x in ham.organizations]
+Out[9]:
+[{"id": 87, "avatar_url": "http://172.17.0.2:3000/avatars/87", "username": "gigaya"},
+ {"id": 88, "avatar_url": "http://172.17.0.2:3000/avatars/88", "username": "ss"}]
+
+# for another user
+In [10]: u = cl.users.get('ooo')
+
+In [11]: [x for x in u.organizations]
+Out[11]: []
+
+# org hooks
+
+
+In [1]: cl = j.clients.gitea.get()
+In [7]: [h for h in x.hooks]
+[Web hook {"id": 3, "created_at": "2018-05-13T00:16:34Z", "updated_at": "2018-05-13T00:16:34Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://kk.com", "config": {"url": "http://kk.com", "content_type": "json"}},
+ Web hook {"id": 4, "created_at": "2018-05-13T00:26:37Z", "updated_at": "2018-05-13T00:26:37Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 5, "created_at": "2018-05-13T00:27:29Z", "updated_at": "2018-05-13T00:27:29Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 6, "created_at": "2018-05-13T00:28:34Z", "updated_at": "2018-05-13T00:28:34Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 7, "created_at": "2018-05-13T00:31:33Z", "updated_at": "2018-05-13T00:31:33Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 8, "created_at": "2018-05-13T00:33:31Z", "updated_at": "2018-05-13T00:33:31Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://ff.com", "config": {"url": "http://ff.com", "content_type": "json"}},
+ Web hook {"id": 9, "created_at": "2018-05-13T00:34:56Z", "updated_at": "2018-05-13T00:34:56Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 10, "created_at": "2018-05-13T00:36:11Z", "updated_at": "2018-05-13T00:36:11Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}},
+ Web hook {"id": 11, "created_at": "2018-05-13T00:38:06Z", "updated_at": "2018-05-13T00:38:06Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://sd.com", "config": {"url": "http://sd.com", "content_type": "json"}}]
+
+
+In [9]: h = x.hooks.new()
+In [11]: h.url = 'http://sd.com'
+In [12]: h.type  = 'gitea'
+In [14]: h.events=['push']
+In [15]: h.save()
+Out[15]: (True, '')
+In [16]: h.update()
+Out[16]: (True, '')
+In [18]: h.delete()
+Out[18]: (True, '')
+
+
+# org members
+cl = j.clients.gitea.get()
+In [2]: x = cl.organizations.get('gigaya', fetch=True)
+In [3]: x.members
+Out[3]: Gitea Members Iterator for organization: gigaya
+
+In [4]: [x for x in x.members]
+Out[4]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
+
+In [23]: x.members.unregister(username='hamdy')
+Out[23]:
+(False,
+ b'{"message":"user is the last member of owner team [uid: 1]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}')
+
+
+In [24]: x.members.unregister(username='ha')
+Out[24]: (False, b'Not found')
+
+# assuming user ooo belongs to a team in the organization
+In [25]: x.members.unregister(username='ooo')
+Out[25]: (True, '')
+
+
+In [2]: x=cl.organizations.get('kk', fetch=True)
+
+In [3]: x.members.public
+Out[3]: []
+
+In [4]: x.members.publicize('hamdy')
+Out[4]: True
+
+In [5]: x.members.public
+Out[5]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
+
+In [6]: x.members.conceal('hamdy')
+Out[6]: True
+
+In [7]: x.members.public
+Out[7]: []
+
+In [8]: x.members.is_public('hamdy')
+Out[8]: False
+
+# teams
+In [2]: x = cl.organizations.get('gigaya', fetch=True)
+
+In [3]: t = x.teams.new()
+
+In [4]: t.name = 'ee'
+
+In [5]: t.save()
+Out[5]:
+(False,
+ b'{"message":"team already exists [org_id: 87, name: ee]","url":"https://godoc.org/github.com/go-gitea/go-sdk/gitea"}')
+
+In [6]: t.name = 'eeee'
+
+In [6]: t.save()
+Out[6]: (False, 'create Error {"permission": "Missing"}')
+
+In [7]: t.permission = 'ss'
+
+In [8]: t.save()
+Out[8]:
+(False,
+ 'create Error {"permission": "Only allowed [owner, admin, read, write]"}')
+
+In [9]: t.permission = 'admin'
+
+In [10]: t.save()
+Out[10]: (True, '')
+
+
+In [8]: t.update()
+Out[8]: (True, '')
+
+In [9]: t.delete()
+Out[9]: (True, '')
+
+# --
+
+In [2]: x=cl.organizations.get('kk', fetch=True)
+
+In [5]: t = x.teams.get(id=11)
+
+In [6]: t
+Out[6]: <Team> {"id": 11, "description": null, "name": null, "permission": null}
+
+In [7]: t.members
+Out[7]: Gitea Members Iterator for team: 11
+
+In [8]: [m for m in t.members]
+Out[8]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
+
+
+In [2]: x = cl.organizations.get('gigaya', fetch=True)
+
+In [3]: t = x.teams.get(id=12)
+
+In [4]: t.members.add('ooo')
+Out[4]: (True, '')
+
+In [5]: [a for a in t.members]
+Out[5]:
+[{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"},
+ {"id": 84, "username": "ooo", "email": "ham@ham.com", "avatar_url": "https://secure.gravatar.com/avatar/547302594c1f80a224bf0638d04edfe3?d=identicon"}]
+
+In [4]: t.members.remove('ooo')
+Out[4]: (True, '')
+
+In [5]: [a for a in t.members]
+Out[5]: [{"id": 1, "username": "hamdy", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon"}]
+
+# Repos
+
+In [4]: cl.repos.get_by_id(30)
+Out[4]: {"id": 30, "clone_url": "http://172.17.0.2:3000/hamdy/crm.git", "full_name": "hamdy/crm", "created_at": "2018-05-21T01:15:02Z", "default_branch": "master", "html_url": "http://172.17.0.2:3000/hamdy/crm", "mirror": true, "name": "crm", "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}, "size": 28, "watchers_count": 1, "ssh_url": "gitea@172.17.0.2:hamdy/crm.git"}
+
+
+r = cl.repos.migrate(clone_addr='https://github.com/hamdy/knn', auth_password='sfafefewfwef', auth_username='hamdy', repo_name='crm', uid=1)
+{'id': 27, 'owner': {'id': 1, 'login': 'hamdy', 'full_name': '', 'email': 'hamdy@greenitglobe.com', 'avatar_url': 'https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon', 'username': 'hamdy'}, 'name': 'crm', 'full_name': 'hamdy/crm', 'description': '', 'empty': False, 'private': True, 'fork': False, 'parent': None, 'mirror': True, 'size': 28, 'html_url': 'http://172.17.0.2:3000/hamdy/crm', 'ssh_url': 'gitea@172.17.0.2:hamdy/crm.git', 'clone_url': 'http://172.17.0.2:3000/hamdy/crm.git', 'website': '', 'stars_count': 0, 'forks_count': 0, 'watchers_count': 1, 'open_issues_count': 0, 'default_branch': 'master', 'created_at': '0001-01-01T00:00:00Z', 'updated_at': '0001-01-01T00:00:00Z', 'permissions': {'admin': True, 'push': True, 'pull': True}}
+
+x = cl.repos.get(owner='hamdy', repo='crm', fetch=True)
+Out[3]: {"id": 27, "clone_url": "http://172.17.0.2:3000/hamdy/crm.git", "full_name": "hamdy/crm", "created_at": "2018-05-19T14:55:15Z", "default_branch": "master", "html_url": "http://172.17.0.2:3000/hamdy/crm", "mirror": true, "name": "crm", "owner": {"id": 1, "login": "hamdy", "full_name": "", "email": "hamdy@greenitglobe.com", "avatar_url": "https://secure.gravatar.com/avatar/859fe0c48f17055d3893ebd4fb218b91?d=identicon", "username": "hamdy"}, "size": 28, "watchers_count": 1, "ssh_url": "gitea@172.17.0.2:hamdy/crm.git"}
+
+x = cl.repos.get(owner='hamdy', repo='toto', fetch=False)
+x.delete()
+(True, '')
+
+    # Branches
+In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
+
+In [3]: [a for a in x.branches]
+Out[3]: [Branch <{"id": null, "name": "master", "commit": {"id": "31dedf15579c31596911ac66aaf48abf0bd12c7a", "message": "Knn algorithm baic implementation and test\n", "url": "Not implemented", "author": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "committer": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "verification": {"verified": false, "reason": "gpg.error.not_signed_commit", "signature": "", "payload": ""}, "timestamp": "2016-01-23T19:46:26Z"}, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>]
+
+In [4]: x.branches.get(name='master')
+Out[4]: Branch <{"id": null, "name": null, "commit": null, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>
+
+In [5]: x.branches.get(name='master', fetch=True)
+Out[5]: Branch <{"id": null, "name": "master", "commit": {"id": "31dedf15579c31596911ac66aaf48abf0bd12c7a", "message": "Knn algorithm baic implementation and test\n", "url": "Not implemented", "author": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "committer": {"name": "Hamdy", "email": "hamdy.a.farag@gmail.com", "username": ""}, "verification": {"verified": false, "reason": "gpg.error.not_signed_commit", "signature": "", "payload": ""}, "timestamp": "2016-01-23T19:46:26Z"}, "committer": null, "message": null, "timestamp": null, "verification": null, "url": null}>
+
+    # collaborators
+In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
+
+In [3]: x.collaborators.is_collaborator('ooos')
+Out[3]: False
+
+In [4]: x.collaborators.is_collaborator('ooo')
+Out[4]: True
+
+In [5]: x.collaborators.remove('ooo')
+Out[5]: (True, '')
+
+In [6]: x.collaborators.is_collaborator('ooo')
+Out[6]: False
+
+In [7]: x.collaborators.add('ooo')
+Out[7]: (True, '')
+
+In [8]: x.collaborators.remove('ooo')
+Out[8]: True
+
+In [9]: x.collaborators.is_collaborator('ooo')
+Out[9]: False
+
+
+    # Repo Hooks
+
+x = cl.repos.get(owner='hamdy', repo='crm')
+In [3]: [h for h in x.hooks]
+Out[4]: [Web hook {"id": 15, "created_at": "2018-05-21T09:52:20Z", "updated_at": "2018-05-21T09:52:20Z", "active": true, "events": ["push"], "type": "gitea", "content_type": "json", "url": "http://dd.com", "config": {"url": "http://dd.com", "content_type": "json"}}]
+
+n [2]: x = cl.repos.get(owner='hamdy', repo='crm')
+
+In [3]: h = x.hooks.new()
+
+In [4]: h.type  = 'gitea'
+
+In [5]: h.url = 'http://sd.com'
+
+In [6]: h.events=['push']
+
+In [7]: h.save()
+Out[7]: (True, '')
+
+In [8]: h.update()
+Out[8]: (True, '')
+
+    # Repo Keys
+
+In [2]: x = cl.repos.get(owner='hamdy', repo='crm')
+
+In [3]: x.keys
+Out[3]: PublicKeys Iterator for repo: crm
+
+In [4]: [a for a in x.keys]
+Out[4]: []
+
+In [5]: k = x.keys.new()
+
+In [6]: k.key = """ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoxqC1QNqEJculbDP7wRI3PRtn6yoNo52HbYty9swIjg
+   ...: 1OqdrDstgw0FKwe9OBYjZpYXCPnyieQ4d3O26Xc4Rc+w88diJKPanlDZV5BpOvbu0NwvAJbxhqz1Ca25KETllBhH30HMl
+   ...: yZGoc2uFWZpw8y9zNFl384TBWLwMD3aUQ2XejVdZxCC7u3CTZU6sQgKipk76t9USgyKpRLkanUUV2OV3WIeLbA4/zr71Q
+   ...: u9IEaxNMLPD3JBZummcERJjJksHbOdybXiEqGMDeSDj5WGxulsVwYhBaTOUxeuf9UErKh/H2HuyCxSj8JaihHNgyiV5gw
+   ...: JNED9fo/ktqk4rb43np root@js"""
+
+In [7]: k.title = "new_key"
+
+In [8]: k.save()
+Out[8]: (True, '')
+
+In [9]: [a for a in x.keys]
+Out[9]: [{"id": 1, "key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoxqC1QNqEJculbDP7wRI3PRtn6yoNo52HbYty9swIjg1OqdrDstgw0FKwe9OBYjZpYXCPnyieQ4d3O26Xc4Rc+w88diJKPanlDZV5BpOvbu0NwvAJbxhqz1Ca25KETllBhH30HMlyZGoc2uFWZpw8y9zNFl384TBWLwMD3aUQ2XejVdZxCC7u3CTZU6sQgKipk76t9USgyKpRLkanUUV2OV3WIeLbA4/zr71Qu9IEaxNMLPD3JBZummcERJjJksHbOdybXiEqGMDeSDj5WGxulsVwYhBaTOUxeuf9UErKh/H2HuyCxSj8JaihHNgyiV5gwJNED9fo/ktqk4rb43np root@js", "title": "new_key", "created_at": "2018-05-21T10:17:51Z", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/crm/keys/1"}]
+In [4]: k.delete()
+Out[4]: (True, '')
+
+In [5]: [a for a in x.keys]
+Out[5]: []
+
+In [2]: x = cl.repos.get(owner='hamdy2', repo='repo', fetch=True)
+
+In [3]: pr = x.pull_requests.get(1, fetch=True)
+
+In [4]: pr = x.pull_requests.get(2, fetch=True)
+
+In [5]: pr.merged
+Out[5]: False
+
+In [6]: pr.merge()
+Out[6]: True
+
+# Get raw file
+In [9]: x = cl.repos.get(owner='hamdy', repo='crm')
+In [9]: x.get_file('master/knn.py')
+
+    # issues
+n [2]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [3]: issue = x.issues.new()
+
+In [4]: issue.title = 'ui'
+
+In [5]: issue.body = 'ui'
+
+In [6]: issue.save()
+Out[6]: (True, '')
+
+In [7]: issue.id
+Out[7]: 3
+
+In [8]: issue.title = 'ui ui '
+
+In [9]: issue.update()
+Out[9]: (True, '')
+
+In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [3]: [a for a in x.issues]
+Out[3]:
+[{"id": 4, "assignee": null, "assignees": [], "body": "scsc", "due_date": null, "labels": [], "milestone": null, "title": "sdsd", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/17", "updated_at": "2018-05-22T12:03:59Z"},
+ {"id": 2, "assignee": null, "assignees": [], "body": "rt", "due_date": null, "labels": [], "milestone": null, "title": "rt", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/15", "updated_at": "2018-05-22T11:19:24Z"},
+ {"id": 1, "assignee": null, "assignees": [], "body": "rt", "due_date": null, "labels": [], "milestone": null, "title": "rt", "state": "open", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/14", "updated_at": "2018-05-22T11:18:40Z"}]
+
+In [4]: x.issues.list(page=1, state='closed')
+Out[4]: [{"id": 3, "assignee": null, "assignees": [], "body": "ui", "due_date": null, "labels": [], "milestone": null, "title": "ui ui ", "state": "closed", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/16", "updated_at": "2018-05-22T11:39:13Z"}]
+
+
+In [6]: x.issues.get('3', fetch=True)
+Out[6]: {"id": 3, "assignee": null, "assignees": [], "body": "ui", "due_date": null, "labels": [], "milestone": null, "title": "ui ui ", "state": "closed", "url": "http://172.17.0.2:3000/api/v1/repos/hamdy/koko/issues/16", "updated_at": "2018-05-22T11:39:13Z"}
+
+In [7]: i = x.issues.get('3', fetch=True)
+
+In [8]: i.title = 'yy'
+
+In [9]: i.update()
+Out[9]: (True, '')
+
+# issue commnets
+In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [3]: i = x.issues.get('3', fetch=True)
+
+In [4]: [c for c in i.issue_comments][0]
+Out[4]: Comment {"id": 23, "created_at": "2018-05-23T08:55:11Z", "pull_request_url": "", "html_url": "http://172.17.0.2:3000/hamdy/koko/issues/3#issuecomment-23", "body": "asascsac"}
+
+In [5]: [c for c in i.issue_comments]
+Out[5]: [Comment {"id": 23, "created_at": "2018-05-23T08:55:11Z", "pull_request_url": "", "html_url": "http://172.17.0.2:3000/hamdy/koko/issues/3#issuecomment-23", "body": "asascsac"}]
+
+In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [3]: i = x.issues.get('3', fetch=True)
+
+In [4]: ii = i.issue_comments.new()
+
+In [5]: ii.body = 'niahaha'
+
+In [6]: ii.save()
+Out[6]: (True, '')
+
+In [7]: ii.body = 'niaaaaaaaaaaaaaaaaaaaaaaah'
+
+In [8]: ii.update()
+Out[8]: (True, '')
+
+In [9]: ii.delete()
+Out[10]: (True, '')
+
+# repo milestones
+In [2]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [3]: [m for m in x.milestones]
+Out[3]:
+[Milestone {"id": 196, "closed_at": null, "closed_issues": 0, "description": "kjjhhhhhhhh", "due_on": null, "open_issues": 0, "title": "milaya"},
+ Milestone {"id": 197, "closed_at": null, "closed_issues": 0, "description": "", "due_on": null, "open_issues": 0, "title": "lll"}]
+
+In [4]: ms = x.milestones.new()
+
+In [5]: ms.title = 'aaaa'
+
+In [6]: ms.save()
+Out[6]: (True, '')
+
+In [7]: ms.title = 'bbb'
+
+In [8]: ms.update()
+Out[8]: (True, '')
+
+In [9]: ms.delete()
+Out[9]: (True, '')
+
+# repo labels
+
+In [17]: x = cl.repos.get(owner='hamdy', repo='koko')
+
+In [18]: [a for a in x.labels]
+Out[18]:
+[Label {"id": 125, "name": "bug", "color": "ee0701"},
+ Label {"id": 126, "name": "duplicate", "color": "cccccc"},
+ Label {"id": 127, "name": "enhancement", "color": "84b6eb"},
+ Label {"id": 128, "name": "help wanted", "color": "128a0c"},
+ Label {"id": 129, "name": "invalid", "color": "e6e6e6"},
+ Label {"id": 130, "name": "question", "color": "cc317c"},
+ Label {"id": 131, "name": "wontfix", "color": "ffffff"}]
+
+
+In [5]: label = x.labels.new()
+In [27]: label.name = 'label'
+In [30]: label.color = '#244d12'
+
+In [31]: label.save()
+Out[31]: (True, '')
+
+In [32]: label.update()
+Out[32]: (True, '')
+
+In [33]: label.delete()
+Out[33]: (True, '')
+
+In [35]: x.labels.get('125', fetch=True)
+Out[35]: Label {"id": 125, "name": "bug", "color": "ee0701"}
 
 ```
 

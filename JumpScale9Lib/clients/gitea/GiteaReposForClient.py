@@ -1,121 +1,83 @@
-import json
 from js9 import j
+
+from .GiteaRepoForOwner import GiteaRepoForOwner
+from .GiteaRepoForNonOwner import GiteaRepoForNonOwner
 
 JSBASE = j.application.jsbase_get_class()
 
 
-class GiteaRepo(JSBASE):
-
-    def __init__(
-            self,
-            user,
-            clone_url=None,
-            created_at=None,
-            default_branch=None,
-            description=None,
-            empty=False,
-            fork=False,
-            forks_count=None,
-            full_name=None,
-            html_url=None,
-            id=None,
-            mirror=None,
-            name=None,
-            open_issues_count=None,
-            owner=None,
-            auto_init=True,
-            gitignores=None,
-            license=None,
-            private=True,
-            readme=None
-
-    ):
+class GiteaReposForClient(JSBASE):
+    def __init__(self, client, user):
         JSBASE.__init__(self)
         self.user = user
-        self.clone_url = clone_url
-        self.description = description
-        self.full_name = full_name
-        self.id = id
-        self.created_at = created_at
-        self.default_branch = default_branch
-        self.empty = empty
-        self.fork = fork
-        self.forks_count = forks_count
-        self.html_url = html_url
-        self.mirror = mirror
-        self.name = name
-        self.open_issues_count = open_issues_count
-        self.owner = owner
-        self.auto_init = auto_init
-        self.gitignores = gitignores
-        self.license=license
-        self.private = private
-        self.readme = readme
+        self.client = client
 
-    @property
-    def data(self):
-        d = {}
+    def search(
+        self,
+        query,
+        mode,
+        user_id=None,
+        page_number=1,
+        page_size=150,
+        exclusive=False
+    ):
 
-        for attr in [
-            'id',
-            'clone_url',
-            'description',
-            'full_name',
-            'created_at',
-            'default_branch',
-            'empty',
-            'fork',
-            'forks_count',
-            'html_url',
-            'mirror',
-            'name',
-            'open_issues_count',
-            'owner'
-        ]:
+        if page_size > 150 or page_size <= 0:
+            page_size = 150
 
-            v = getattr(self, attr)
-            if v:
-                d[attr] = v
-        return d
+        if mode not in ["fork", "source", "mirror", "collaborative"]:
+            self.logger.error('Only modes allowed [fork, source, mirror, collaborative]')
+            return []
 
-    def _validate(self, create=False):
-        """
-            Validate required attributes are set before doing any operation
-        """
-        errors = {}
-        is_valid = True
+        result = []
+        items = self.user.client.api.repos.repoSearch(
+            exclusive=exclusive,
+            limit=page_size,
+            mode=mode,
+            page=page_number,
+            q=query,
+            uid=user_id,
+        ).json()
 
-        operation = 'create'
+        if not items['ok']:
+            self.logger.error('Response error')
+            return []
 
-        if create:
-            if self.id:
-                is_valid = False
-                errors['id'] = 'Already existing'
+        for item in items['data']:
+            if item['owner']['username'] == self.client.users.current.username:
+                repo = GiteaRepoForOwner(self.client, user=self.user)
             else:
-                if not self.user.username:
-                    is_valid = False
-                    errors['user'] = {'username':'Missing'}
+                repo = GiteaRepoForNonOwner(self.client, user=None)
+                u = self.client.users.new()
+                for k, v in item['owner'].items():
+                    setattr(u, k, v)
+                repo.user = u
 
-                if not self.name:
-                    is_valid = False
-                    errors['name'] = 'Missing'
+            for k, v in item.items():
+                setattr(repo, k, v)
+            result.append(repo)
+        return result
 
-        if is_valid:
-            return True, ''
+    def get(self, id):
+        try:
+            resp = self.user.client.api.repositories.repoGetByID(id=str(id)).json()
+            if resp['owner']['username'] == self.client.users.current.username:
+                r = GiteaRepoForOwner(self.client, user=self.user)
+            else:
+                r = GiteaRepoForNonOwner(self.client, user=None)
+                u = self.client.users.new()
+                for k, v in resp['owner'].items():
+                    setattr(u, k, v)
+                r.user = u
 
-        return False, '{0} Error '.format(operation) + json.dumps(errors)
+            for k, v in resp.items():
+                setattr(r, k, v)
+            return r
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.error('id not found')
+            else:
+                self.logger.error(e.response.content)
 
-    def save(self, commit=True):
-        is_valid, err = self._validate(create=True)
-
-        if not commit or not is_valid:
-            return is_valid, err
-        if not self.user.is_current:
-            resp = self.user.client.api.admin.adminCreateRepo(data=self.data, username=self.user.username)
-        else:
-            resp = self.user.client.api.user.createCurrentUserRepo(data=self.data)
-        user = resp.json()
-        for k, v in user.items():
-            setattr(self, k, v)
-
-    __str__ = __repr__ = lambda self: json.dumps(self.data)
+    def __repr__ (self):
+        return "<General Repos finder and getter (by ID)>"

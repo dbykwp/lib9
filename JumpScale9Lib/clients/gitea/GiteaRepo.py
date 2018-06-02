@@ -76,6 +76,7 @@ class GiteaRepo(JSBASE):
         self.watchers_count=watchers_count
         self.permossions=permissions
         self.ssh_url=ssh_url
+        self.archive_type = None
 
     @property
     def data(self):
@@ -145,6 +146,8 @@ class GiteaRepo(JSBASE):
                 return False, 'User is required'
             if not self.name:
                 return False, 'Repo name is required'
+            if not self.archive_type in ['zip', 'tar.gz']:
+                return False, 'Only zip and tar.gz are accepted archive types'
 
         if is_valid:
             return True, ''
@@ -157,13 +160,24 @@ class GiteaRepo(JSBASE):
         if not commit or not is_valid:
             self.logger.debug(err)
             return is_valid
-        if not self.user.is_current:
-            resp = self.user.client.api.admin.adminCreateRepo(data=self.data, username=self.user.username)
-        else:
-            resp = self.user.client.api.user.createCurrentUserRepo(data=self.data)
-        user = resp.json()
-        for k, v in user.items():
-            setattr(self, k, v)
+
+        try:
+            if not self.user.is_current:
+                resp = self.user.client.api.admin.adminCreateRepo(data=self.data, username=self.user.username)
+            else:
+                resp = self.user.client.api.user.createCurrentUserRepo(data=self.data)
+
+            repo = resp.json()
+            for k, v in repo.items():
+                setattr(self, k, v)
+
+            return True
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.error('not found')
+            else:
+                self.logger.error(e.response.content)
+            return False
 
     def delete(self, commit=True):
         is_valid, err = self._validate(delete=True)
@@ -173,18 +187,123 @@ class GiteaRepo(JSBASE):
             return is_valid
         try:
             self.user.client.api.repos.repoDelete(repo=self.name, owner=self.user.username)
+            self.id = None
             return True
         except Exception as e:
             return False, e.response.content
 
-    def archive(self, archive, path):
-        raise NotImplementedError('Please review why not working')
-        is_valid, err = self._validate(delete=True)
+    def star(self):
+        try:
+
+            self.user.client.api.user.userCurrentPutStar(
+                data={},
+                owner=self.user.username,
+                repo=self.name
+            )
+
+            return True
+
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.debug('Repo or owner not found')
+            else:
+                self.logger.debug(e.response.content)
+
+        return False
+
+    def unstar(self):
+        try:
+            self.user.client.api.user.userCurrentDeleteStar(
+                owner=self.user.username,
+                repo=self.name
+            )
+            return True
+
+        except Exception as e:
+
+            if e.response.status_code == 404:
+                self.logger.debug('Repo or owner not found')
+            else:
+                self.logger.debug(e.response.content)
+        return False
+
+    @property
+    def is_starred_by_current_user(self):
+        try:
+            self.user.client.api.user.userCurrentCheckStarring(
+                owner=self.user.username,
+                repo=self.name
+            )
+
+            return True
+
+        except Exception as e:
+
+            if e.response.status_code == 404:
+                self.logger.debug('Repo or owner not found')
+            else:
+                self.logger.debug(e.response.content)
+        return False
+
+    def download(self, destination_dir, branch='master', type='zip'):
+        self.archive_type = type
+
+        is_valid, err = self._validate(archive=True)
 
         if not is_valid:
-            return is_valid, err
+            self.logger.debug(err)
+            return is_valid
 
-        self.user.client.api.repos.repoGetArchive(archive=archive, filepath=path, repo=self.name, owner=self.user.username)
+        try:
+            resp = self.user.client.api.repos.repoGetArchive(
+                archive=None,
+                filepath='%s.%s' % (branch, type),
+                repo=self.name, owner=self.user.username
+            )
+
+            if not os.path.exists(destination_dir):
+                j.sal.fs.createDir(destination_dir)
+
+            path = os.path.join(destination_dir, '%s.%s' % (branch, type))
+
+            with open(path, 'wb') as f:
+                f.write(resp.content)
+            self.logger.debug('Successfully downloaded %s' % path)
+            return True
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.debug('Repo or owner not found')
+            else:
+                self.logger.debug(e.response.content)
+            return False
+
+    def download_file(self, destination_dir, filename, branch='master'):
+        """
+        get_file('master/knn.py')
+        """
+
+        try:
+            resp = self.user.client.api.repos.repoGetRawFile(
+                filepath='%s/%s' % (branch, filename),
+                repo=self.name,
+                owner=self.user.username
+            )
+
+            if not os.path.exists(destination_dir):
+                j.sal.fs.createDir(destination_dir)
+
+            path = os.path.join(destination_dir, filename)
+
+            with open(path, 'wb') as f:
+                f.write(resp.content)
+            self.logger.debug('Successfully downloaded %s' % path)
+            return True
+        except Exception as e:
+            if e.response.status_code == 404:
+                self.logger.debug('Repo or owner not found')
+            else:
+                self.logger.debug(e.response.content)
+            return False
 
     @property
     def branches(self):
@@ -234,11 +353,8 @@ class GiteaRepo(JSBASE):
         return GiteaLabels(self.user.client, self, self.user)
 
 
-    def get_file(self, path):
-        """
-        get_file('master/knn.py')
-        """
-        resp = self.user.client.api.repos.repoGetRawFile(filepath=path, repo=self.name, owner=self.user.username)
-        if resp.status_code == 200:
-            return resp.content
 
+    def __str__(self):
+        return '\n<Repo>\n%s' % json.dumps(self.data, indent=4)
+
+    __repr__ = __str__
