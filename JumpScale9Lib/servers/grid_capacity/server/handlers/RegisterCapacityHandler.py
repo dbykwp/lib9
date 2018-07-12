@@ -26,6 +26,8 @@ MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAES5X8XrfKdx9gYayFITc89wad4usrk0n2
 -----END PUBLIC KEY-----
 """
 
+influxcl = j.clients.influxdb.get('capacity')
+
 
 def RegisterCapacityHandler():
     inputs = request.get_json()
@@ -42,9 +44,9 @@ def RegisterCapacityHandler():
     except jsonschema.ValidationError as e:
         return jsonify(errors="bad request body: {}".format(e)), 400
     
-
     inputs['farmer'] = iyo_organization
     inputs['updated'] = datetime.now()
+
     capacity = Capacity(**inputs)
 
     if farmer.location:
@@ -52,4 +54,11 @@ def RegisterCapacityHandler():
 
     capacity.save()
 
+    points = [{
+        "measurement": "capacitybeats",
+        "tags":{"node_id": capacity.node_id, "farmer_id": iyo_organization},
+        "fields":{"up": 1} 
+    }]
+
+    influxcl.write_points(points, database='capacity')
     return capacity.to_json(use_db_field=False), 201, {'Content-type': 'application/json'}

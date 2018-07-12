@@ -15,6 +15,9 @@ configure(app, settings.IYO_CLIENTID, settings.IYO_SECRET, settings.IYO_CALLBACK
 
 # connect to mongodb
 j.clients.mongoengine.get('capacity', interactive=False)
+influxcl = j.clients.influxdb.get('capacity')
+influxcl.create_database("capacity")
+
 
 db.init_app(app)
 
