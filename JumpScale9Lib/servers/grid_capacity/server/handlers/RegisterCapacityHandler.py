@@ -59,6 +59,9 @@ def RegisterCapacityHandler():
         "tags":{"node_id": capacity.node_id, "farmer_id": iyo_organization},
         "fields":{"up": 1} 
     }]
-
-    influxcl.write_points(points, database='capacity')
+    try:
+        influxcl.write_points(points, database='capacity')
+    except:
+        # don't fail here.
+        pass
     return capacity.to_json(use_db_field=False), 201, {'Content-type': 'application/json'}
