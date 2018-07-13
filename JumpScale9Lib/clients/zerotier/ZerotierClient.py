@@ -302,10 +302,12 @@ class ZerotierClient(JSConfigClient):
         @param network_id: ID of the network
         """
         if network_id is "":
-            print("YVES: fill in from config")
-            from IPython import embed;embed(colors='Linux')
-            #if not specified raise error
-             
+            if len(self.client.network.listNetworks().json()) == 0:
+                msg = 'Failed to retrieve network. No networks created yet.'
+                self.logger.error(msg)
+                raise RuntimeError(msg)
+            network_id = self.client.network.listNetworks().json()[0]['id']
+                         
         resp = self.client.network.getNetwork(id=network_id)
         if resp.status_code != 200:
             msg = 'Failed to retrieve network. Error: {}'.format(resp.text)
