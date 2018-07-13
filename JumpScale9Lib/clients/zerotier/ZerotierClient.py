@@ -15,7 +15,7 @@ class NetworkMember(JSBASE):
     """
     def __init__(self, network, address, data):
         """
-        Initialize new memeber
+        Initialize new member
         """
         JSBASE.__init__(self)
         self.data = data
@@ -294,7 +294,6 @@ class ZerotierClient(JSConfigClient):
             raise RuntimeError(msg)
         return self._network_creates_from_dict(items=resp.json())
 
-
     def network_get(self, network_id=""):
         """
         Retrieves details information about a netowrk
@@ -306,7 +305,12 @@ class ZerotierClient(JSConfigClient):
                 msg = 'Failed to retrieve network. No networks created yet.'
                 self.logger.error(msg)
                 raise RuntimeError(msg)
-            network_id = self.client.network.listNetworks().json()[0]['id']
+            # if a default network was configured, return default network
+            if self.config.data['networkid']:
+                network_id = self.config.data['networkid']
+            else:
+                # if no default network was configured, take the first network
+                network_id = self.client.network.listNetworks().json()[0]['id']
                          
         resp = self.client.network.getNetwork(id=network_id)
         if resp.status_code != 200:

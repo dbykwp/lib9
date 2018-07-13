@@ -190,6 +190,7 @@ class PacketNet(JSConfigClient):
             pstring = '%20'.join(params)
             ipxeUrl = ipxeUrl + '/' + pstring
 
+        import ipdb; ipdb.set_trace()
         node = self._startDevice(hostname=hostname, plan=plan, facility=facility, os="",
                                  wait=wait, remove=remove, ipxeUrl=ipxeUrl, zerotierId=zerotierId, always_pxe=True)
 
