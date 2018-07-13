@@ -157,19 +157,34 @@ class PacketNet(JSConfigClient):
     def startZeroOS(self, hostname="removeMe", plan='baremetal_0', facility='ams1', zerotierId="",
                     zerotierAPI="", wait=True, remove=False, params=None, branch='master'):
         """
-        return (zero-os-client,pubIpAddress,zerotierIpAddress)
+        returns (Zero-OS client, node, ZeroTier IP address)
 
         @param development: If True, development argument will be added to the ipxe command
         """
         self.logger.info(
             "start device:%s plan:%s facility:%s zerotierId:%s wait:%s" % (hostname, plan, facility, zerotierId, wait)
         )
-        if zerotierId.strip() == "" or zerotierId is None:
-            raise RuntimeError("zerotierId needs to be specified")
-        if zerotierAPI.strip() == "" or zerotierAPI is None:
-            raise RuntimeError("zerotierAPI needs to be specified")
-        ipxeUrl = "http://unsecure.bootstrap.gig.tech/ipxe/{}/{}".format(branch, zerotierId)
+        
+        zt_client = None
 
+        if zerotierId.strip() == "" or zerotierId is None:
+            try:
+                zt_client = j.clients.zerotier.get()
+                zt_my_network = zt_client.network_get()
+                zerotierId = zt_my_network.id
+            except RuntimeError as e:
+                self.logger.info("[-] %s" % e)
+                raise RuntimeError("Specify value for zerotierId, or make sure you have a ZeroTier configuration instance and already created at least one ZeroTier network.")
+
+        if zerotierAPI.strip() == "" or zerotierAPI is None:
+            try:
+                zt_client = j.clients.zerotier.get()
+                zerotierAPI = zt_client.config.data['token_']
+            except RuntimeError as e:
+                self.logger.info("[-] %s" % e)
+                raise RuntimeError("Specify value for zerotierAPI, or make sure you have a ZeroTier configuration instance.")
+
+        ipxeUrl = "http://unsecure.bootstrap.gig.tech/ipxe/{}/{}".format(branch, zerotierId)
 
         if params is not None:
             pstring = '%20'.join(params)
@@ -178,10 +193,9 @@ class PacketNet(JSConfigClient):
         node = self._startDevice(hostname=hostname, plan=plan, facility=facility, os="",
                                  wait=wait, remove=remove, ipxeUrl=ipxeUrl, zerotierId=zerotierId, always_pxe=True)
 
-        # data = {'token_': zerotierAPI, 'networkID_': zerotierId}
-        data = {'token_': zerotierAPI}
-        zerotierClient = j.clients.zerotier.get(self.instance, data=data)
-
+        if zt_client == None:
+            data = {'token_': zerotierAPI}
+            zt_client = j.clients.zerotier.get(self.instance, data=data)
 
         public_ip = node.addr
         if not public_ip:
@@ -191,7 +205,7 @@ class PacketNet(JSConfigClient):
 
         while True:
             try:
-                network = zerotierClient.network_get(network_id=zerotierId)
+                network = zt_client.network_get(network_id=zerotierId)
                 member = network.member_get(public_ip=public_ip)
                 member.authorize()
                 ipaddr_priv = member.private_ip
