@@ -28,6 +28,7 @@
                             <p>Farm ID: <code>{{farmer.id}}</code></p>
                             <p>Farm name: <code>{{ farmer.name}}</code></p>
                             <p>IYO organization: <code>{{farmer.iyo_organization }}</code></p>
+                            <p>Up time in last month (in hours): <code>{{farmer.last_month_uptime_in_hours}}</code></p></o>
                             {% if farmer.location and farmer.location.country %}
                                 <p>Location: <code>{{farmer.location.country}}, {{farmer.location.city}}</code></p>
                             {% endif %}
