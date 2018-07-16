@@ -190,11 +190,10 @@ class PacketNet(JSConfigClient):
             pstring = '%20'.join(params)
             ipxeUrl = ipxeUrl + '/' + pstring
 
-        import ipdb; ipdb.set_trace()
         node = self._startDevice(hostname=hostname, plan=plan, facility=facility, os="",
                                  wait=wait, remove=remove, ipxeUrl=ipxeUrl, zerotierId=zerotierId, always_pxe=True)
 
-        if zt_client == None:
+        if zt_client is None:
             data = {'token_': zerotierAPI}
             zt_client = j.clients.zerotier.get(self.instance, data=data)
 
@@ -217,7 +216,21 @@ class PacketNet(JSConfigClient):
                 time.sleep(5)
 
         self.logger.info("[+] zerotier IP: %s" % ipaddr_priv)
-        data = {'host': ipaddr_priv, 'timeout': 10, 'port': 6379, 'password_': '', 'db': 0, 'ssl': True}
+
+        # If organization was passed in params, get a JWT to save in ZOS config instance
+        jwt = ''
+        iyo_organization = None
+        if params is not None:
+            for param in params:
+                if param.startswith('organization'):
+                    iyo_organization = param.split('=')[1]
+                    break
+        if iyo_organization is not None:
+            iyo_client = j.clients.itsyouonline.get(instance='main')
+            memberof_scope = 'user:memberof:{}'.format(iyo_organization)
+            jwt = iyo_client.jwt_get(scope=memberof_scope, refreshable=True)
+        
+        data = {'host': ipaddr_priv, 'timeout': 10, 'port': 6379, 'password_': jwt, 'db': 0, 'ssl': True}
         zosclient = j.clients.zero_os.get(ipaddr_priv, data=data)
         return zosclient, node, ipaddr_priv
 
