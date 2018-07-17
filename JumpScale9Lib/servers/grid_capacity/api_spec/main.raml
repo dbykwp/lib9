@@ -95,6 +95,7 @@ types:
         201:
           body:
             type: Capacity
+
     get:
       displayName: ListCapacity
       description: List all the nodes capacity
@@ -109,6 +110,18 @@ types:
         200:
           body:
             type: Capacity[]
+    
+    /beat:
+      post:
+        displayName: RecordCapacityBeat
+        description: Record capacity beat
+        body:
+          type: Capacity
+        responses:
+          201:
+            body:
+              type: Capacity
+
     /{node_id}:
       get:
         displayName: GetCapacity
@@ -117,6 +130,9 @@ types:
           200:
             body:
               type: Capacity
+
+
+
   /farmer_create:
     get:
       displayName: RegisterFarmer
