@@ -8,15 +8,21 @@ from js9 import j
 from . import settings
 from .flask_itsyouonline import configure
 from .models import db
+from .grid_stats import get_farmer_up_period_since_days, get_node_up_period_since_days
 
 app = Flask(__name__)
+
 app.secret_key = os.urandom(24)
 configure(app, settings.IYO_CLIENTID, settings.IYO_SECRET, settings.IYO_CALLBACK, '/callback', None, True, True, 'organization')
 
 # connect to mongodb
 j.clients.mongoengine.get('capacity', interactive=False)
-influxcl = j.clients.influxdb.get('capacity')
-influxcl.create_database("capacity")
+
+
+from flask_debugtoolbar import DebugToolbarExtension
+# the toolbar is only enabled in debug mode:
+app.debug = True
+toolbar = DebugToolbarExtension(app)
 
 
 db.init_app(app)
@@ -44,6 +50,23 @@ def uptime(seconds):
         return '%d days, %02d:%02d:%02d' % (delta.days, hrs, min, sec)
 
     return '%02d:%02d:%02d' % (hrs, min, sec)
+
+@app.template_filter()
+def farmer_uptime_last_month_in_hours(farmer):
+    return "{:.3f}".format(get_farmer_up_period_since_days(farmer.iyo_organization))
+    
+@app.template_filter()
+def farmer_uptime_last_month_in_percent(farmer):
+    return "{:.3f}".format( get_farmer_up_period_since_days(farmer.iyo_organization) * 100 / (30 * 24))
+
+
+@app.template_filter()
+def node_uptime_last_month_in_hours(node):
+    return "{:.3f}".format(get_node_up_period_since_days(node.node_id))
+    
+@app.template_filter()
+def node_uptime_last_month_in_percent(node):
+    return "{:.3f}".format(get_node_up_period_since_days(node.node_id) * 100 / (30*24))
 
 
 @app.template_filter()
