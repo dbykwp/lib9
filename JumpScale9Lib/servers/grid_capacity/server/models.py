@@ -4,7 +4,6 @@ from mongoengine import (DateTimeField, Document, EmbeddedDocument,
                          ListField, PointField, ReferenceField, StringField)
 
 db = MongoEngine()
-from .capacity_stats import get_farmer_up_period_since_days
 
 class NodeRegistration:
 
@@ -114,21 +113,14 @@ class FarmerRegistration:
         if name:
             query['name'] = name
         
-        # update farmer uptime
-
-        farmers = Farmer.objects(**query)
-        for farmer in farmers:
-            farmer.last_month_uptime_in_hours = get_farmer_up_period_since_days(farmer.iyo_organization, 30) 
-
-        return farmers
-
+        return Farmer.objects(**query)
 
     @staticmethod
     def get(id):
-        farmer = Farmer.objects(pk=id)
+        farmer = Farmer.objects(pk=id).first()
         if not farmer:
             raise FarmerNotFoundError("farmer '%s' not found" % id)
-        return farmer[0]
+        return farmer
 
 
 class Location(EmbeddedDocument):

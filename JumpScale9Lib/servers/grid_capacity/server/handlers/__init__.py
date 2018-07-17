@@ -8,3 +8,4 @@ from .RegisterCapacityHandler import RegisterCapacityHandler
 from .GetCapacityHandler import GetCapacityHandler
 from .RegisterFarmerHandler import RegisterFarmerHandler
 from .UpdateFarmerHandler import UpdateFarmerHandler
+from .RecordCapacityBeatHandler import RecordCapacityBeatHandler

@@ -11,6 +11,7 @@ import jose.jwt
 from flask import jsonify, request
 from js9 import j
 
+from ..flask_itsyouonline import ITSYOUONLINE_KEY
 from ..models import Capacity, Farmer
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -18,22 +19,12 @@ Capacity_schema = JSON.load(open(dir_path + '/schema/Capacity_schema.json'))
 Capacity_schema_resolver = jsonschema.RefResolver('file://' + dir_path + '/schema/', Capacity_schema)
 Capacity_schema_validator = Draft4Validator(Capacity_schema, resolver=Capacity_schema_resolver)
 
-IYO_PUBLIC_KEY = """
------BEGIN PUBLIC KEY-----
-MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAES5X8XrfKdx9gYayFITc89wad4usrk0n2
-7MjiGYvqalizeSWTHEpnd7oea9IQ8T5oJjMVH5cc0H5tFSKilFFeh//wngxIyny6
-6+Vq5t5B0V0Ehy01+2ceEon2Y0XDkIKv
------END PUBLIC KEY-----
-"""
-
-influxcl = j.clients.influxdb.get('capacity')
-
 
 def RegisterCapacityHandler():
     inputs = request.get_json()
     # refresh jwt is needed otherwise return original
     jwt = j.clients.itsyouonline.refresh_jwt_token(inputs.pop('farmer_id'))
-    token = jose.jwt.decode(jwt, IYO_PUBLIC_KEY)
+    token = jose.jwt.decode(jwt, ITSYOUONLINE_KEY)
     iyo_organization = token['scope'][0].replace('user:memberof:', '')
     farmer = Farmer.objects(iyo_organization=iyo_organization).first()
     if not farmer:
@@ -53,15 +44,4 @@ def RegisterCapacityHandler():
         capacity.location = farmer.location
 
     capacity.save()
-
-    points = [{
-        "measurement": "capacitybeats",
-        "tags":{"node_id": capacity.node_id, "farmer_id": iyo_organization},
-        "fields":{"up": 1} 
-    }]
-    try:
-        influxcl.write_points(points, database='capacity')
-    except:
-        # don't fail here.
-        pass
     return capacity.to_json(use_db_field=False), 201, {'Content-type': 'application/json'}

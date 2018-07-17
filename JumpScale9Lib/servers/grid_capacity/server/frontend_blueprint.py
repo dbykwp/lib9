@@ -3,7 +3,9 @@ import os
 from flask import Blueprint, send_from_directory, render_template, request, session, abort, redirect
 from .flask_itsyouonline import requires_auth, force_invalidate_session, ITSYOUONLINE_KEY
 from .models import NodeRegistration, FarmerRegistration, FarmerNotFoundError
+from .grid_stats import get_farmer_up_period_since_days, get_node_up_period_since_days, get_hours_in_days
 import jwt
+
 frontend_bp = Blueprint('frontent', __name__)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -45,7 +47,13 @@ def capacity():
         form['page'] = int(request.args.get('page') or 1)
         form['per_page'] = int(request.args.get('pre_page') or 20)
 
-        nodes = NodeRegistration.search(**form)
+        nodes = NodeRegistration.search(**form) # nodes object. 
+        newnodes = []
+        for node in nodes.iterable:
+            node.last_month_uptime_in_hours = get_node_up_period_since_days(node.node_id)
+            node.last_month_uptime_percent = (100* node.last_month_uptime_in_hours/get_hours_in_days(30))
+            newnodes.append(node)
+        nodes.iterable = newnodes
 
     return render_template('capacity.html', nodes=nodes, form=form, countries=countries, farmers=farmers)
 
@@ -53,6 +61,9 @@ def capacity():
 @frontend_bp.route('/farmers', methods=['GET'])
 def list_farmers():
     farmers = FarmerRegistration.list()
+    for f in farmers:
+        f.last_month_uptime_in_hours = get_farmer_up_period_since_days(f.iyo_organization)
+        f.last_month_uptime_percent = (100* f.last_month_uptime_in_hours)/ get_hours_in_days(30)
     return render_template('farmers.html', farmers=farmers)
 
 

@@ -19,10 +19,10 @@ configure(app, settings.IYO_CLIENTID, settings.IYO_SECRET, settings.IYO_CALLBACK
 j.clients.mongoengine.get('capacity', interactive=False)
 
 
-from flask_debugtoolbar import DebugToolbarExtension
+# from flask_debugtoolbar import DebugToolbarExtension
 # the toolbar is only enabled in debug mode:
-app.debug = True
-toolbar = DebugToolbarExtension(app)
+# app.debug = True
+# toolbar = DebugToolbarExtension(app)
 
 
 db.init_app(app)

@@ -43,6 +43,14 @@ def RegisterCapacity():
     return handlers.RegisterCapacityHandler()
 
 
+@api_api.route('/api/nodes/beat', methods=['POST'])
+def RecordCapacityBeat():
+    """
+    Register a node capacity
+    It is handler for POST /api/nodes
+    """
+    return handlers.RecordCapacityBeatHandler()
+
 @api_api.route('/api/nodes/<node_id>', methods=['GET'])
 def GetCapacity(node_id):
     """
@@ -69,3 +77,5 @@ def UpdateFarmer():
     It is handler for GET /api/farmer_update
     """
     return handlers.UpdateFarmerHandler()
+
+
