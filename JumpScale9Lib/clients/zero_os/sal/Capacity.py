@@ -89,3 +89,20 @@ class Capacity:
 
         client = j.clients.grid_capacity.get(interactive=False)
         client.api.RegisterCapacity(data)
+
+    def send_beat(self):
+        farmer_id = self._node.kernel_args.get('farmer_id')
+        if not farmer_id:
+            return False
+
+        data = self.get(farmer_id)
+
+        if 'private' in self._node.kernel_args:
+            data['robot_address'] = 'private'
+        elif not data['robot_address']:
+            raise RuntimeError('Can not register a node without robot_address')
+
+        client = j.clients.grid_capacity.get(interactive=False)
+        client.api.RecordCapacityBeat(data)
+
+        
