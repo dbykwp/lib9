@@ -57,7 +57,7 @@ def farmer_uptime_last_month_in_hours(farmer):
     
 @app.template_filter()
 def farmer_uptime_last_month_in_percent(farmer):
-    return "{:.3f}".format( get_farmer_up_period_since_days(farmer.iyo_organization) * 100 / (30 * 24))
+    return "{:.3f}".format(get_farmer_up_period_since_days(farmer.iyo_organization) * 100 / (30 * 24))
 
 
 @app.template_filter()

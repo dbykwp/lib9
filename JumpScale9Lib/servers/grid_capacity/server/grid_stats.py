@@ -28,7 +28,7 @@ def get_node_up_period_since_days(node_id, days=30):
     if not res or "count" not in res[0]:
         return 0
     count = res[0]['count']  # every 5 seconds
-    return count/(12*60)
+    return count/(6*60)
 
 def get_node_up_in_last(node_id, days=30):
     q = influxcl.query(
