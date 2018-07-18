@@ -10,6 +10,7 @@ frontend_bp = Blueprint('frontent', __name__)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+
 @frontend_bp.route('/static/<path:path>')
 def send_js(path):
     return send_from_directory(dir_path, os.path.join('static', path))
@@ -18,7 +19,8 @@ def send_js(path):
 @frontend_bp.route('/', methods=['GET'])
 def capacity():
     countries = NodeRegistration.all_countries()
-    farmers = FarmerRegistration.list()
+    farmers = FarmerRegistration.list().order_by('name')
+
     nodes = []
     form = {
         'mru': 0,
@@ -29,38 +31,31 @@ def capacity():
     }
 
     if len(request.args) != 0:
-        mru = request.args.get('mru') or None
-        if mru:
-            form['mru'] = int(mru)
-        cru = request.args.get('cru') or None
-        if cru:
-            form['cru'] = int(cru)
-        sru = request.args.get('sru') or None
-        if sru:
-            form['sru'] = int(sru)
-        hru = request.args.get('hru') or None
-        if hru:
-            form['hru'] = int(hru)
+        for unit in ['mru', 'cru', 'sru', 'hru']:
+            u = request.args.get(unit) or None
+            if u:
+                form[unit] = int(u)
+
         form['country'] = request.args.get('country') or ''
         form['farmer'] = request.args.get('farmer') or ''
 
         form['page'] = int(request.args.get('page') or 1)
         form['per_page'] = int(request.args.get('pre_page') or 20)
 
-        nodes = NodeRegistration.search(**form) # nodes object. 
+        nodes = NodeRegistration.search(**form, order='-updated')
         newnodes = []
         for node in nodes.iterable:
             node.last_month_uptime_in_hours = get_node_up_period_since_days(node.node_id)
             node.last_month_uptime_percent = (100* node.last_month_uptime_in_hours/get_hours_in_days(30))
             newnodes.append(node)
         nodes.iterable = newnodes
-
+ 
     return render_template('capacity.html', nodes=nodes, form=form, countries=countries, farmers=farmers)
 
 
 @frontend_bp.route('/farmers', methods=['GET'])
 def list_farmers():
-    farmers = FarmerRegistration.list()
+    farmers = FarmerRegistration.list(order='name')
     for f in farmers:
         f.last_month_uptime_in_hours = get_farmer_up_period_since_days(f.iyo_organization)
         f.last_month_uptime_percent = (100* f.last_month_uptime_in_hours)/ get_hours_in_days(30)
@@ -72,6 +67,7 @@ def farmer_registered():
     jwt = session['iyo_jwt']
     return render_template('farm_registered.html', jwt=jwt)
 
+
 @frontend_bp.route('/farm_updated', methods=['GET'])
 def farmer_updated():
     jwt = session['iyo_jwt']
@@ -81,7 +77,6 @@ def farmer_updated():
 @frontend_bp.route('/api', methods=['GET'])
 def api_index():
     return render_template('api.html')
-
 
 
 @frontend_bp.route('/register_farm', methods=['GET'])
@@ -103,7 +98,7 @@ def edit_farmer(organization):
             # invalidate iyo_authenticated to retry login with the new scope.
             force_invalidate_session()
 
-            return redirect("/edit_farm/{}".format(organization))        
+            return redirect("/edit_farm/{}".format(organization))
         try:
             farmer = FarmerRegistration.get(organization)
         except FarmerNotFoundError as e:
@@ -111,5 +106,3 @@ def edit_farmer(organization):
         else:
             return render_template('edit_farm.html', farmer=farmer)
     return handler()
-
-
