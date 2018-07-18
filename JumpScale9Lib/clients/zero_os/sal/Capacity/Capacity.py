@@ -143,7 +143,19 @@ class Capacity:
         if not farmer_id:
             return False
 
-        data = self.get(farmer_id)
+        robot_address = ""
+        public_addr = self._node.public_addr
+        if public_addr:
+            robot_address = "http://%s:6600" % public_addr
+        os_version = "{branch} {revision}".format(**self._node.client.info.version())
+
+        data = dict(
+            farmer_id=farmer_id,
+            node_id=self._node.name,
+            robot_address=robot_address,
+            os_version=os_version,
+            uptime=int(self._node.uptime())
+        )
 
         if 'private' in self._node.kernel_args:
             data['robot_address'] = 'private'
@@ -151,4 +163,5 @@ class Capacity:
             raise RuntimeError('Can not register a node without robot_address')
 
         client = j.clients.grid_capacity.get(interactive=False)
-        client.api.RecordCapacityBeat(data)
+        resp = client.api.RecordCapacityBeat(data)
+        resp.raise_for_status()

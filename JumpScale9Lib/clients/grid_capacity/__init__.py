@@ -4,6 +4,7 @@ from .ActualUsedCapacity import ActualUsedCapacity
 from .Capacity import Capacity
 from .Error import Error
 from .Farmer import Farmer
+from .Heartbeat import Heartbeat
 from .Location import Location
 from .ReservedCapacity import ReservedCapacity
 from .ResourceUnits import ResourceUnits
