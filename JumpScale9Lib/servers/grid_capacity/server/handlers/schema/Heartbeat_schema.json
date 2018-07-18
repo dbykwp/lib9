@@ -1,0 +1,32 @@
+{
+	"$schema": "http://json-schema.org/schema#",
+	"type": "object",
+	"properties": {
+		"farmer_id": {
+			"type": [
+				"string",
+				"null"
+			]
+		},
+		"node_id": {
+			"type": "string"
+		},
+		"os_version": {
+			"type": "string"
+		},
+		"robot_address": {
+			"type": "string"
+		},
+		"uptime": {
+			"type": [
+				"integer",
+				"null"
+			]
+		}
+	},
+	"required": [
+		"node_id",
+		"os_version",
+		"robot_address"
+	]
+}

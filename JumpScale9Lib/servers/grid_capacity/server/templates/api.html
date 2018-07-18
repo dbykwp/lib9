@@ -871,6 +871,125 @@
                 <div class="panel panel-white resource-modal">
                   <div class="panel-heading">
                     <h4 class="panel-title">
+                      <a class="collapsed" data-toggle="collapse" href="#panel_api_nodes_beat">
+                        <span class="parent">/api/nodes</span>/beat
+                      </a>
+                      <span class="methods">
+            <a href="#api_nodes_beat_post">
+<!-- modal shown by hashchange event -->
+              <span class="badge badge_post">post</span>
+                      </a>
+                      </span>
+                    </h4>
+                  </div>
+                  <div id="panel_api_nodes_beat" class="panel-collapse collapse">
+                    <div class="panel-body">
+                      <div class="list-group">
+                        <div onclick="window.location.href = '#api_nodes_beat_post'" class="list-group-item">
+                          <span class="badge badge_post">post</span>
+                          <div class="method_description">
+                            <p>Record capacity beat</p>
+                          </div>
+                          <div class="clearfix"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal fade" tabindex="0" id="api_nodes_beat_post">
+                    <div class="modal-dialog modal-lg">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                          <h4 class="modal-title" id="myModalLabel">
+                            <span class="badge badge_post">post</span>
+                            <span class="parent">/api/nodes</span>/beat
+                          </h4>
+                        </div>
+                        <div class="modal-body">
+                          <div class="alert alert-info">
+                            <p>Record capacity beat</p>
+                          </div>
+
+                          <!-- Nav tabs -->
+                          <ul class="nav nav-tabs">
+                            <li class="active">
+                              <a href="#api_nodes_beat_post_request" data-toggle="tab">Request</a>
+                            </li>
+                            <li>
+                              <a href="#api_nodes_beat_post_response" data-toggle="tab">Response</a>
+                            </li>
+                          </ul>
+
+                          <!-- Tab panes -->
+                          <div class="tab-content">
+                            <div class="tab-pane active" id="api_nodes_beat_post_request">
+                              <h3>Body</h3>
+                              <p><strong>Media type</strong>: application/json</p>
+                              <p><strong>Type</strong>: object</p>
+                              <strong>Properties</strong>
+                              <ul>
+                                <li>
+                                  <strong>node_id</strong>:
+                                  <em>required (string)
+      </em>
+                                </li>
+                                <li>
+                                  <strong>farmer_id</strong>:
+                                  <em>(string)
+      </em>
+                                  <p>ID of the farmer owning the node</p>
+                                </li>
+                                <li>
+                                  <strong>os_version</strong>:
+                                  <em>required (string)
+      </em>
+                                  <p>branch and revision of 0-OS</p>
+                                </li>
+                                <li>
+                                  <strong>robot_address</strong>:
+                                  <em>required (string)
+      </em>
+                                  <p>URL to the node 0-robot of the node</p>
+                                </li>
+                                <li>
+                                  <strong>uptime</strong>:
+                                  <em>(integer)
+      </em>
+                                  <p>uptime of the node in seconds</p>
+                                </li>
+                              </ul>
+                              <p><strong>Example</strong>:</p>
+                              <div class="examples">
+                                <pre><code>{
+  "node_id": "544546f60261",
+  "farmer_id": "JohnDoe",
+  "os_version": "heads/v1.2.2 6b693a496de940b26ee1a2356b67f7d65767c13f",
+  "robot_address": "http://10.241.100.10:6600",
+  "uptime": 92682,
+  "location": {
+    "continent": "Europe",
+    "country": "Belgium",
+    "city": "Brussels",
+    "latitude": 50.83,
+    "longitude": 4.29
+  }
+}</code></pre>
+                              </div>
+                            </div>
+                            <div class="tab-pane" id="api_nodes_beat_post_response">
+                              <h2>HTTP status code
+                                <a href="http://httpstatus.es/201" target="_blank">201</a>
+                              </h2>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel panel-white resource-modal">
+                  <div class="panel-heading">
+                    <h4 class="panel-title">
                       <a class="collapsed" data-toggle="collapse" href="#panel_api_nodes__node_id_">
                         <span class="parent">/api/nodes</span>/{node_id}
                       </a>
