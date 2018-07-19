@@ -1,7 +1,7 @@
 from js9 import j
 from JumpScale9Lib.servers.grid_capacity.server.models import FarmerRegistration, NodeRegistration
 
-influxcl = j.clients.influxdb.get('capacity')
+influxcl = j.clients.influxdb.get('capacity', interactive=False)
 influxcl.create_database("capacity")
 
 def get_hours_in_days(days=1):
