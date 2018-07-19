@@ -138,7 +138,7 @@ class Capacity:
         resp.raise_for_status()
 
 
-    def send_beat(self):
+    def send_heartbeat(self):
         farmer_id = self._node.kernel_args.get('farmer_id')
         if not farmer_id:
             return False
