@@ -12,7 +12,7 @@ from flask import jsonify, request
 from js9 import j
 
 from ..models import Capacity, Farmer
-from ..grid_stats import push_node_beat
+from ..grid_stats import push_node_heartbeat
 from ..flask_itsyouonline import ITSYOUONLINE_KEY
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -36,14 +36,5 @@ def RecordCapacityBeatHandler():
     except jsonschema.ValidationError as e:
         return jsonify(errors="bad request body: {}".format(e)), 400
 
-
-    inputs.pop('farmer_id')
-
-    # heartbeat is subset of capacity.
-    inputs['farmer'] = iyo_organization
-    inputs['updated'] = datetime.now()
-
-    capacity = Capacity(**inputs)
-
-    push_node_beat(farmer.iyo_organization, capacity.node_id)
+    push_node_heartbeat(iyo_organization, inputs['node_id'])
     return '', 204
