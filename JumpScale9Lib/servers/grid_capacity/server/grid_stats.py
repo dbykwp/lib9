@@ -44,7 +44,7 @@ def get_farmer_complete_capacity(iyo_org):
                 total_sru=sum([n.sru for n in nodes if n.sru])
             )
 
-def push_node_beat(farmer_id, node_id):
+def push_node_heartbeat(farmer_id, node_id):
 
     points = [{
         "measurement": "capacitybeats",
@@ -58,7 +58,7 @@ def push_node_beat(farmer_id, node_id):
         # don't fail here.
 
 
-def push_node_beat_with_time(farmer_id, node_id, time_):
+def push_node_heartbeat_with_time(farmer_id, node_id, time_):
     points = [{
         "measurement": "capacitybeats",
         "tags":{"node_id": node_id, "farmer_id": farmer_id},
