@@ -92,7 +92,6 @@ class Capacity:
             data['robot_address'] = 'private'
         elif not data['robot_address']:
             raise RuntimeError('Can not register a node without robot_address')
-
         client = j.clients.grid_capacity.get(interactive=False)
         _, resp = client.api.RegisterCapacity(data)
         resp.raise_for_status()
@@ -132,8 +131,6 @@ class Capacity:
         )
 
         client = j.clients.grid_capacity.get(interactive=False)
-        client.api.RegisterCapacity(data)
-
         resp = client.api.UpdateReservedCapacity(data=data, node_id=self._node.name)
         resp.raise_for_status()
 
