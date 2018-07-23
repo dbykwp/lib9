@@ -8,7 +8,7 @@ from js9 import j
 from . import settings
 from .flask_itsyouonline import configure
 from .models import db
-from .grid_stats import get_farmer_up_period_since_days, get_node_up_period_since_days
+from .grid_stats import get_farmer_up_period_since_days, get_node_up_period_since_days, setup_grafana_dashboard
 
 app = Flask(__name__)
 
@@ -115,4 +115,5 @@ def internal_error(err):
 
 
 if __name__ == "__main__":
+
     app.run(debug=True, port=settings.PORT, host=settings.PORT)
