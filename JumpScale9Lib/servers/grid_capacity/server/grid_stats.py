@@ -1,5 +1,6 @@
 from js9 import j
 from JumpScale9Lib.servers.grid_capacity.server.models import FarmerRegistration, NodeRegistration
+import json
 
 influxcl = j.clients.influxdb.get('capacity', interactive=False)
 influxcl.create_database("capacity")
@@ -73,4 +74,33 @@ def push_node_heartbeat_with_time(farmer_id, node_id, time_):
     except Exception as ex:
         print(ex)
         # don't fail here.
- 
+
+
+def setup_grafana_dashboard():
+    parentdir = j.sal.fs.getParent(__file__)
+
+    grafana_dashboard_json_file = j.sal.fs.joinPaths(parentdir, "grafana_dashboard.json")
+    # dashboard_model_str = open(grafana_dashboard_json_file).read()
+    dashboard_model = None
+    with open(grafana_dashboard_json_file) as f:
+        dashboard_model = json.load(f)
+
+    if dashboard_model is None:
+        return False
+    
+    grafancl = j.clients.grafana.get("capacity")
+
+    data = {
+        'type': 'influxdb', 
+        'access': 'proxy', 
+        'database': "capacity" , 
+        'name': "", 
+        'url': "http://localhost:8086", 
+        'user': 'admin', 
+        'password': 'admin', 
+        'default': True, 
+    }
+    grafancl.addDataSource(data)
+    new_dashboard = grafancl.updateDashboard(dashboard_model)
+    new_dashboard['panels_count'] = len(dashboard_model['panels'])
+    return new_dashboard
