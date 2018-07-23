@@ -48,6 +48,15 @@ class GrafanaClient(JSConfigBase):
         self._session = requests.session()
         self._session.auth = auth
 
+    def addDashboard(dashboard):
+        if j.data.types.string.check(dashboard):
+            dashboard = j.data.serializer.json.loads(dashboard) 
+        
+        has_id = dashboard.get("id", None)
+        if has_id is not None:
+            raise ValueError("To add new dashboard set id to null")
+        return self.updateDashboard(dashboard)
+
     def updateDashboard(self, dashboard):
         if j.data.types.string.check(dashboard):
             dashboard = j.data.serializer.json.loads(dashboard)

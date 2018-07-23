@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+            
+{% block body %}
+    <main role="main">
+        <div class="container">
+        {% for panel in range(1, dashboard['panels_count']+1) %}
+        <iframe src="http://localhost:3500/d-solo/{{dashboard['uid']}}/{{dashboard['slug']}}?orgId=1&panelId={{panel}}&from=now/M&to=now/M" width="450" height="200" frameborder="0"></iframe>
+        {% endfor %}
+        </div>
+
+    </main>
+{% endblock %}
+            

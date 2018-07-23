@@ -1,5 +1,6 @@
 from js9 import j
 from .server import settings
+from .server.grid_stats import setup_grafana_dashboard
 
 TEMPLATE = """
 host = "localhost"
@@ -26,5 +27,7 @@ class CapacityServer(JSConfigBase):
         self.app = app
 
     def start(self):
+        dashboard = setup_grafana_dashboard()
+        self.app.config['grafana_dashboard_info'] = dashboard
         self.app.run(host=settings.HOST, port=settings.PORT, debug=settings.DEBUG)
 
