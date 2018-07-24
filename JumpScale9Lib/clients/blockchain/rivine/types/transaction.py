@@ -3,7 +3,7 @@ Module contianing all transaction types
 """
 from JumpScale9Lib.clients.rivine.types.signatures import Ed25519PublicKey
 from JumpScale9Lib.clients.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
- LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment
+ LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition
 from JumpScale9Lib.clients.rivine.encoding import binary
 from JumpScale9Lib.clients.rivine.utils import hash
 from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash
@@ -155,6 +155,20 @@ class TransactionV1:
         self._coins_outputs.append(coin_output)
         return coin_output
 
+
+    def add_atomicswap_output(self, value, unlockhashes, min_nr_sig):
+        """
+        Add a new MultiSignature output to the transaction
+
+        @param value: Value of the output in hastings
+        @param unlockhashes: List of all unlock hashes which are authorised to spend this output by signing off
+        @param min_nr_sig: Defines the amount of signatures required in order to spend this output
+        """
+        condition = MultiSignatureCondition(unlockhashes=unlockhashes,
+                                            min_nr_sig=min_nr_sig)
+        coin_output = CoinOutput(value=value, condition=condition)
+        self._coins_outputs.append(coin_output)
+        return coin_output
 
 
     def add_minerfee(self, minerfee):

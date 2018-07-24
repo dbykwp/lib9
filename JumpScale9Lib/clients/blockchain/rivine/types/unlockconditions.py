@@ -9,6 +9,7 @@ from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash
 # this is the value if the locktime is less than it, it means that the locktime should be interpreted as the chain height lock instead of the timestamp
 TIMELOCK_CONDITION_HEIGHT_LIMIT = 5000000
 ATOMICSWAP_CONDITION_TYPE = bytearray([2])
+MULTISIG_CONDITION_TYPE = bytearray([4])
 
 
 class BaseFulFillment:
@@ -94,6 +95,51 @@ class SingleSignatureFulfillment(BaseFulFillment):
         self._type = bytearray([1])
 
 
+
+class MultiSignatureCondition:
+    """
+    A MultiSignatureCondition class
+    """
+
+    def __init__(self, unlockhashes, min_nr_sig):
+        """
+        Initialize a new MultiSignatureCondition object
+
+        @param unlockhashes: List of unlockhashes
+        @param min_nr_sig: Minimum number of signatures required to fulfill this condition
+        """
+        self._unlockhashes = unlockhashes
+        self._min_nr_sig = min_nr_sig
+        self._type = MULTISIG_CONDITION_TYPE
+
+
+    @property
+    def binary(self):
+        """
+        Returns a binary encoded versoin of the MultiSignatureCondition
+        """
+        result = bytearray()
+        result.extend(self._type)
+        result.extend(binary.encode(self._min_nr_sig))
+        result.extend(binary.encode(len(self._unlockhashes))
+        for unlockhash in self._unlockhashes:
+            result.extend(binary.encode(UnlockHash.from_string(unlockhash)))
+
+        return result
+
+
+    @property
+    def json(self):
+        """
+        Returns a json encoded version of the MultiSignatureCondition
+        """
+        return {
+            'type': binary.decode(self._type, type_=int),
+            'data': {
+                'unlockhashes': self._unlockhashes,
+                'minimumsignaturecount': self._min_nr_sig
+            }
+        }
 
 
 class AtomicSwapCondition:
