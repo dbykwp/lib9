@@ -1,13 +1,17 @@
 from js9 import j
-from .JSMainApp import JSMainApp
+# from .JSMainApp import JSMainApp
 from gevent.pywsgi import WSGIServer
 import sys
 import os
+
+from .JSWebLoader import JSWebLoader
+
 JSConfigBase = j.tools.configmanager.base_class_config
 
 TEMPLATE = """
     host = "localhost"
     port = 5050
+    port_ssl = 0
     secret_ = ""
     ws_dir = ""
     """
@@ -23,31 +27,31 @@ class JSWebServer(JSConfigBase):
 
         self.host = self.config.data["host"]
         self.port = int(self.config.data["port"])
+        self.port_ssl = int(self.config.data["port_ssl"])
         self.address = '{}:{}'.format(self.host, self.port)
 
         config_path = j.sal.fs.joinPaths(self.path,"site_config.toml")
-        if not j.sal.fs.exists(config_path):
-            raise RuntimeError("cannot find: %s"%config_path)
-        self.site_config = j.data.serializer.toml.load(config_path)
-        self._inited = False
+        if j.sal.fs.exists(config_path):
+            self.site_config = j.data.serializer.toml.load(config_path)
+        else:
+            self.site_config = {}
 
+        self._inited = False
+        j.servers.web.latest = self
+        self.loader = JSWebLoader()
     
-    def init(self):
+    def init(self, debug=False):
         
         if self._inited:
             return
         
         self.logger.info("init server")
     
-        static_folder='%s/app/base/static'%self.path
-        # print(static_folder)
-        self.app = JSMainApp(self.instance,static_folder=static_folder)
-
         if self.path not in sys.path:
             sys.path.append(self.path)
 
-        from app import app_load, db
-        app_load(self.app)
+        self.app = self.loader.create_app(debug=debug)
+        self.app.debug = True
 
         self.http_server = WSGIServer((self.host, self.port), self.app)
 
@@ -57,14 +61,15 @@ class JSWebServer(JSConfigBase):
 
         self.docs_load()
 
-        j.servers.web.latest = self
-
         # self._sig_handler.append(gevent.signal(signal.SIGINT, self.stop))
 
         self._inited = False        
 
 
     def docs_load(self):
+        if "docsite" not in self.site_config:
+            return
+
         for item in self.site_config["docsite"]:
             url=item["url"]
             name=item["name"]
@@ -72,8 +77,7 @@ class JSWebServer(JSConfigBase):
                 path = j.clients.git.getContentPathFromURLorPath(url)
                 if not j.sal.fs.exists(path):
                     j.clients.git.pullGitRepo(url=url)
-                j.tools.docgenerator.load(pathOrUrl=path,name=name)
-        j.tools.docgenerator.process()        
+                j.tools.docgenerator.load(path=path,name=name)       
 
     @property
     def path(self):
@@ -85,16 +89,16 @@ class JSWebServer(JSConfigBase):
             self.logger.info("generated sslkeys for gedis in %s" % self.ws_dir)
         else:
             self.logger.info('using existing key and cerificate for gedis @ %s' % self.ws_dir)
-        key = os.path.join(self.ws_dir, 'ca.key')
-        cert = os.path.join(self.ws_dir, 'ca.crt')
+        key = os.path.join(self.path, 'ca.key')
+        cert = os.path.join(self.path, 'ca.crt')
         return key, cert
 
-    def start(self, reset=False):
+    def start(self, reset=False, debug=False):
         print("start")
 
         # self.scaffold(reset=reset)
 
-        self.init()
+        self.init(debug=debug)
         print ("Webserver running")
         print (self)
         self.http_server.serve_forever()
