@@ -9,7 +9,7 @@ from .RivineClient import RivineClient
 JSConfigBaseFactory = j.tools.configmanager.base_class_configs
 
 
-class OVCClientFactory(JSConfigBaseFactory):
+class RivineClientFactory(JSConfigBaseFactory):
     """
     Factroy class to get a rivine client object
     """

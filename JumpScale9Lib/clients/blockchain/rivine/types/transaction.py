@@ -1,12 +1,12 @@
 """
 Module contianing all transaction types
 """
-from JumpScale9Lib.clients.rivine.types.signatures import Ed25519PublicKey
-from JumpScale9Lib.clients.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
+from JumpScale9Lib.clients.blockchain.rivine.types.signatures import Ed25519PublicKey
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
  LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition
-from JumpScale9Lib.clients.rivine.encoding import binary
-from JumpScale9Lib.clients.rivine.utils import hash
-from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash
+from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
+from JumpScale9Lib.clients.blockchain.rivine.utils import hash
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
 
 import base64
 
@@ -156,16 +156,19 @@ class TransactionV1:
         return coin_output
 
 
-    def add_atomicswap_output(self, value, unlockhashes, min_nr_sig):
+    def add_multisig_output(self, value, unlockhashes, min_nr_sig, locktime=None):
         """
         Add a new MultiSignature output to the transaction
 
         @param value: Value of the output in hastings
         @param unlockhashes: List of all unlock hashes which are authorised to spend this output by signing off
         @param min_nr_sig: Defines the amount of signatures required in order to spend this output
+        @param locktime: If provided then a locktimecondition will be created for this output
         """
         condition = MultiSignatureCondition(unlockhashes=unlockhashes,
                                             min_nr_sig=min_nr_sig)
+        if locktime is not None:
+            condition = LockTimeCondition(condition=condition, locktime=locktime)
         coin_output = CoinOutput(value=value, condition=condition)
         self._coins_outputs.append(coin_output)
         return coin_output
@@ -205,7 +208,6 @@ class TransactionV1:
             buffer.extend(binary.encode(coin_input.parent_id, type_='hex'))
 
         # encode coin outputs
-        # raise RuntimeError(binary.encode(self._coins_outputs, type_='slice').hex())
         buffer.extend(binary.encode(self._coins_outputs, type_='slice'))
 
         # encode the number of blockstakes

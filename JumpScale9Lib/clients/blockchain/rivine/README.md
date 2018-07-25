@@ -26,7 +26,7 @@ seed = j.clients.rivine.generate_seed()
 
 From a seed you can create new wallet
 ```python
-        from JumpScale9Lib.clients.rivine.RivineWallet import RivineWallet
+        from JumpScale9Lib.clients.blockchain.rivine.RivineWallet import RivineWallet
         wallet = RivineWallet(seed=seed,
                                     bc_network='https://explorer.testnet.threefoldtoken.com/',
                                     bc_network_password='test123',
@@ -45,7 +45,7 @@ Or alternatively you can configure the jumpscale client instance using the follo
 'password_': 'test123',
  'minerfee': 10,
  'nr_keys_per_seed': 5,
- 'seed_': 'festival mobile negative nest valid cheese pulp alpha relax language friend vast'}
+ 'seed_': seed}
 
     rivine_client = j.clients.rivine.get('mytestwallet', data=client_data)
     rivine_client.config.save()
@@ -104,4 +104,15 @@ For more details about the atomicswap process, it is recommended to check the do
 The light wallet client exposes the APIs via the following hook:
 ```python
 wallet.atomicswap.[TAB]
+```
+
+## MultiSignature transactions
+Multisignatures transactions are special type of transactions. They allow you to send funds to multiple wallets and specify how many participants needs to sign the transaction before the funds can be used.
+To learn more about the different use cases of Multi-Signatures transactions please check the docs [here](https://github.com/rivine/rivine/blob/master/doc/transactions/multisig.md)
+
+The jumpscale client support sending money to multiple wallets, to do that you need to use the send_to_many method available in the wallet object:
+```python
+recipients = ['01c1f24eb0792086567fe9e2b8d6c2a66cca733be2518fbac22ec8793da3b00b0759d37b6100bf',
+              '016b0eb94e794ccfc596f0a181478f3ef9dfcc80046a2c33688ec3fa603ea67eb8643a7808e2ac']
+wallet.send_to_many(amount=5, recipients=recipients, required_nr_of_signatures=2)
 ```

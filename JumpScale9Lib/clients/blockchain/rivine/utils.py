@@ -6,8 +6,8 @@ import string
 from pyblake2 import blake2b
 from random import choice
 from .const import HASH_SIZE
-from JumpScale9Lib.clients.rivine.encoding import binary
-from JumpScale9Lib.clients.rivine import secrets
+from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
+from JumpScale9Lib.clients.blockchain.rivine import secrets
 
 
 DURATION_REGX_PATTERN = '^(?P<hours>\d*)h(?P<minutes>\d*)m(?P<seconds>\d*)s$'

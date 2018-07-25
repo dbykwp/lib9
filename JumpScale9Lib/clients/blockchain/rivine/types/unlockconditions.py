@@ -2,9 +2,9 @@
 Unlockconditions module
 """
 
-from JumpScale9Lib.clients.rivine.encoding import binary
-from JumpScale9Lib.clients.rivine.errors import DoubleSignatureError
-from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash
+from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
+from JumpScale9Lib.clients.blockchain.rivine.errors import DoubleSignatureError
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
 
 # this is the value if the locktime is less than it, it means that the locktime should be interpreted as the chain height lock instead of the timestamp
 TIMELOCK_CONDITION_HEIGHT_LIMIT = 5000000
@@ -120,11 +120,12 @@ class MultiSignatureCondition:
         """
         result = bytearray()
         result.extend(self._type)
-        result.extend(binary.encode(self._min_nr_sig))
-        result.extend(binary.encode(len(self._unlockhashes))
+        condition_binary = bytearray()
+        condition_binary.extend(binary.encode(self._min_nr_sig))
+        condition_binary.extend(binary.encode(len(self._unlockhashes)))
         for unlockhash in self._unlockhashes:
-            result.extend(binary.encode(UnlockHash.from_string(unlockhash)))
-
+            condition_binary.extend(binary.encode(UnlockHash.from_string(unlockhash)))
+        result.extend(binary.encode(condition_binary, type_='slice'))
         return result
 
 

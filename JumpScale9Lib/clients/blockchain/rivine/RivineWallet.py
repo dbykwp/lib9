@@ -22,11 +22,11 @@ from .types.signatures import Ed25519PublicKey, SPECIFIER_SIZE
 from .types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY, UNLOCKHASH_TYPE, UNLOCKHASH_SIZE, UNLOCKHASH_CHECKSUM_SIZE
 
 from JumpScale9 import j
-from JumpScale9Lib.clients.rivine import utils
-from JumpScale9Lib.clients.rivine.atomicswap.atomicswap import AtomicSwapManager
-from JumpScale9Lib.clients.rivine.types.transaction import TransactionFactory, DEFAULT_TRANSACTION_VERSION
-from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash
-from JumpScale9Lib.clients.rivine.types.unlockconditions import TIMELOCK_CONDITION_HEIGHT_LIMIT
+from JumpScale9Lib.clients.blockchain.rivine import utils
+from JumpScale9Lib.clients.blockchain.rivine.atomicswap.atomicswap import AtomicSwapManager
+from JumpScale9Lib.clients.blockchain.rivine.types.transaction import TransactionFactory, DEFAULT_TRANSACTION_VERSION
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import TIMELOCK_CONDITION_HEIGHT_LIMIT
 
 from .const import MINER_PAYOUT_MATURITY_WINDOW, WALLET_ADDRESS_TYPE, ADDRESS_TYPE_SIZE, HASTINGS_TFT_VALUE
 
@@ -313,12 +313,39 @@ class RivineWallet:
         if data is not None:
             data = binary.encode(data)
         # convert amount to hastings
-        amount = amount * HASTINGS_TFT_VALUE
+        amount = int(amount * HASTINGS_TFT_VALUE)
         transaction = self._create_transaction(amount=amount,
                                                 recipient=recipient,
                                                 sign_transaction=True,
                                                 custom_data=data,
                                                 locktime=locktime)
+        self._commit_transaction(transaction=transaction)
+        return transaction
+
+
+    def send_to_many(self, amount, recipients, required_nr_of_signatures, data=None, locktime=None):
+        """
+        Sends funds to multiple recipients
+        Also specificies how many recipients need to sign before the funds can be spent
+
+        @param amount: The amount needed to be transfered in TF Tokens
+        @param recipients: List of recipients addresses.
+        @param required_nr_of_signatures: Defines the amount of signatures required in order to spend this fund.
+        @param data: Custom data to add to the transaction record
+        @type custom_data: bytearray
+        @param locktime: Identifies the height or timestamp until which this transaction is locked
+        """
+
+        if data is not None:
+            data = binary.encode(data)
+        # convert amount to hastings
+        amount = int(amount * HASTINGS_TFT_VALUE)
+        transaction = self._create_multisig_transaction(amount=amount,
+                                                        recipients=recipients,
+                                                        min_nr_sig=required_nr_of_signatures,
+                                                        sign_transaction=True,
+                                                        custom_data=data,
+                                                        locktime=locktime)
         self._commit_transaction(transaction=transaction)
         return transaction
 
@@ -333,7 +360,7 @@ class RivineWallet:
         """
         if minerfee is None:
             minerfee = self._minerfee
-        wallet_fund = self.current_balance * HASTINGS_TFT_VALUE
+        wallet_fund = int(self.current_balance * HASTINGS_TFT_VALUE)
         required_funds = amount + minerfee
         if required_funds > wallet_fund:
             raise InsufficientWalletFundsError('No sufficient funds to make the transaction')
@@ -355,11 +382,63 @@ class RivineWallet:
             used_addresses[address] = ulh
             input_result['parent_id'] = address
             input_result['pub_key'] = self._keys[ulh].public_key
-            # transaction.add_coin_input(parent_id=address, pub_key=self._keys[ulh].public_key)
 
             input_value += int(unspent_coin_output['value'])
             result.append(input_result)
         return result, used_addresses, minerfee, (input_value - required_funds)
+
+
+    def _create_multisig_transaction(self, amount, recipients, min_nr_sig=None, minerfee=None, sign_transaction=True, custom_data=None, locktime=None):
+        """
+        Creates a transaction with Mulitsignature condition
+        MultiSignature Condition allows the funds to be sent to multiple wallet addresses and specify how many signatures required to make this transaction spendable
+
+        @param amount: The amount needed to be transfered in hastings
+        @param recipients: List of recipients addresses.
+        @param min_nr_sig: Defines the amount of signatures required in order to spend this output
+        @param minerfee: The minerfee for this transaction in hastings
+        @param sign_transaction: If True, the created transaction will be singed
+        @param custom_data: Custom data to add to the transaction record
+        @type custom_data: bytearray
+        @param locktime: Identifies the height or timestamp until which this transaction is locked
+        """
+        transaction = TransactionFactory.create_transaction(version=DEFAULT_TRANSACTION_VERSION)
+
+        # set the the custom data on the transaction
+        if custom_data is not None:
+            transaction.add_data(custom_data)
+
+
+        input_results, used_addresses, minerfee, remainder = self._get_inputs(amount=amount)
+        for input_result in input_results:
+            transaction.add_coin_input(**input_result)
+
+        for txn_input in transaction.coins_inputs:
+            if used_addresses[txn_input.parent_id] not in self._keys:
+            # if self._unspent_coins_outputs[txn_input.parent_id][ulh] not in self._keys:
+                raise NonExistingOutputError('Trying to spend unexisting output')
+
+        transaction.add_multisig_output(value=amount, unlockhashes=recipients, min_nr_sig=min_nr_sig, locktime=locktime)
+
+        # we need to check if the sum of the inputs is more than the required fund and if so, we need
+        # to send the remainder back to the original user
+        if remainder > 0:
+            # we have leftover fund, so we create new transaction, and pick on user key that is not used
+            for address in self._keys.keys():
+                if address in used_addresses.values():
+                    continue
+                transaction.add_coin_output(value=remainder, recipient=address)
+                break
+
+        # add minerfee to the transaction
+        transaction.add_minerfee(minerfee)
+
+        if sign_transaction:
+            # sign the transaction
+            self._sign_transaction(transaction)
+
+        return transaction
+
 
 
     def _create_transaction(self, amount, recipient, minerfee=None, sign_transaction=True, custom_data=None, locktime=None):
