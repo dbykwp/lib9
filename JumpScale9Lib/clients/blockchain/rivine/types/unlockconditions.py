@@ -5,11 +5,34 @@ Unlockconditions module
 from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 from JumpScale9Lib.clients.blockchain.rivine.errors import DoubleSignatureError
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
+from JumpScale9Lib.clients.blockchain.rivine.types.signatures import SiaPublicKeyFactory
 
 # this is the value if the locktime is less than it, it means that the locktime should be interpreted as the chain height lock instead of the timestamp
 TIMELOCK_CONDITION_HEIGHT_LIMIT = 5000000
 ATOMICSWAP_CONDITION_TYPE = bytearray([2])
 MULTISIG_CONDITION_TYPE = bytearray([4])
+
+
+class FulfillmentFactory:
+    """
+    FulfillmentFactory class
+    """
+    @staticmethod
+    def from_dict(fulfillment_dict):
+        """
+        Creates a fulfillment from a dict
+        """
+        fulfillment = None
+        if 'data' in fulfillment_dict:
+            if 'type' in fulfillment_dict:
+                if fulfillment_dict['type'] == 1:
+                    pub_key = SiaPublicKeyFactory.from_string(fulfillment_dict['data']['publickey'])
+                    fulfillment = SingleSignatureFulfillment(pub_key=pub_key)
+                elif fulfillment_dict['type'] == 2:
+                    pass
+
+        return fulfillment
+
 
 
 class BaseFulFillment:
@@ -52,6 +75,27 @@ class BaseFulFillment:
                                                                     extra_objects=self._extra_objects)
         self._signature = sig_ctx['secret_key'].sign(sig_hash)
 
+
+class MultiSignatureFulfillment:
+    """
+    MultiSignatureFulfillment class
+    """
+    def __init__(self):
+        """
+        Initializes new MultiSignatureFulfillment object
+        """
+        self._type = bytearray([3])
+        self._pairs = []
+
+
+    def add_signature_pair(self, pub_key, signature):
+        """
+        Adds a publickey signature pair
+        """
+        self._pairs.append({
+            'public_key': pub_key,
+            'signature': signature
+        })
 
 
 

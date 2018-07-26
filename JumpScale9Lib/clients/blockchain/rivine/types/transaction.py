@@ -3,12 +3,13 @@ Module contianing all transaction types
 """
 from JumpScale9Lib.clients.blockchain.rivine.types.signatures import Ed25519PublicKey
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
- LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition
+ LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition, FulfillmentFactory
 from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 from JumpScale9Lib.clients.blockchain.rivine.utils import hash
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
 
 import base64
+import json
 
 DEFAULT_TRANSACTION_VERSION = 1
 HASHTYPE_COINOUTPUT_ID = 'coinoutputid'
@@ -27,6 +28,37 @@ class TransactionFactory:
         """
         if version == 1:
             return TransactionV1()
+
+
+    @staticmethod
+    def from_json(txn_json):
+        """
+        Creates a new transaction object from a json formated string
+
+        @param txn_json: JSON string, representing a transaction
+        """
+        txn_dict = json.loads(txn_json)
+        txn = None
+        if 'version' in txn_dict:
+            if txn_dict['version'] == DEFAULT_TRANSACTION_VERSION:
+                txn = TransactionV1()
+                if 'data' in txn_dict:
+                    txn_data = txn_dict['data']
+                    if 'coininputs' in txn_data:
+                        for ci_info in txn_data['coininputs']:
+                            ci = CoinInput.from_dict(ci_info)
+                            txn._coins_inputs.append(ci)
+                    if 'coinoutputs' in txn_data:
+                        for co_info in txn_data['coinoutputs']:
+                            co = CoinOutput.from_dict(co_info)
+                            txn._coins_outputs.append(co)
+                    if 'minerfees' in txn_data:
+                        for minerfee in txn_data['minersfees'] :
+                            txn.add_minerfee(int(minerfee))
+
+
+
+
 
 
 class TransactionV1:
@@ -65,7 +97,6 @@ class TransactionV1:
         Sets transaction id
         """
         self._id = txn_id
-
 
     @property
     def coins_inputs(self):
@@ -243,6 +274,20 @@ class CoinInput:
         """
         self._parent_id = parent_id
         self._fulfillment = fulfillment
+
+
+    @classmethod
+    def from_dict(cls, ci_info):
+        """
+        Creates a new CoinInput from dict
+
+        @param ci_info: JSON dict representing a coin input
+        """
+        if 'fulfillment' in ci_info:
+            f = FulfillmentFactory.from_dict(ci_info['fulfillment'])
+            if 'parentid' in ci_info:
+                return cls(parent_id=ci_info['parentid'],
+                           fulfillment=f)
 
     @property
     def parent_id(self):

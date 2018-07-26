@@ -7,6 +7,22 @@ from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 SIGEd25519 = 'ed25519'
 SPECIFIER_SIZE = 16
 
+
+class SiaPublicKeyFactory:
+    """
+    SiaPublicKeyFactory class
+    """
+    @staticmethod
+    def from_string(pub_key_str):
+        """
+        Creates a SiaPublicKey from a string
+        """
+        algo, pub_key = pub_key_str.split(':')
+        if algo == SIGEd25519:
+            return Ed25519PublicKey(pub_key=bytearray.fromhex(pub_key))
+
+
+
 class SiaPublicKey:
     """
     A SiaPublicKey is a public key prefixed by a Specifier. The Specifier
