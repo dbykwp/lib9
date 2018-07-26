@@ -28,6 +28,8 @@ class FulfillmentFactory:
                 if fulfillment_dict['type'] == 1:
                     pub_key = SiaPublicKeyFactory.from_string(fulfillment_dict['data']['publickey'])
                     fulfillment = SingleSignatureFulfillment(pub_key=pub_key)
+                    if 'signature' in fulfillment_dict['data']:
+                        fulfillment._signature = bytearray.fromhex(fulfillment_dict['data']['signature'])
                 elif fulfillment_dict['type'] == 2:
                     pass
 
@@ -137,6 +139,22 @@ class SingleSignatureFulfillment(BaseFulFillment):
         """
         super().__init__(pub_key=pub_key)
         self._type = bytearray([1])
+
+
+
+class UnlockCondtionFactory:
+    """
+    UnlockCondtionFactory class
+    """
+    @staticmethod
+    def from_dict(condition_dict):
+        """
+        Creates an unlock condition object from a dictionary
+        """
+        if 'data' in condition_dict:
+            if 'type' in condition_dict:
+                if condition_dict['type'] == 1:
+                    return UnlockHashCondition(unlockhash=UnlockHash.from_string(condition_dict['data']['unlockhash']))
 
 
 

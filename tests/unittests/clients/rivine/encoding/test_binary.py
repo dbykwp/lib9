@@ -4,15 +4,15 @@ Unittests for rivine binary encoding module
 
 import pytest
 from unittest.mock import MagicMock, patch
-import JumpScale9Lib.clients.rivine.encoding.binary
-from JumpScale9Lib.clients.rivine.encoding import binary
+import JumpScale9Lib.clients.blockchain.rivine.encoding.binary
+from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 
 
 def test_encode_all():
     """
     Test encode_all function
     """
-    with patch.object(JumpScale9Lib.clients.rivine.encoding.binary, "encode") as encode_mock:
+    with patch.object(JumpScale9Lib.clients.blockchain.rivine.encoding.binary, "encode") as encode_mock:
         result = binary.encode_all(['hello', 15])
         assert encode_mock.call_count == 2
         assert type(result) == bytearray

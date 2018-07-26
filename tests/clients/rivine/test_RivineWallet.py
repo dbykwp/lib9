@@ -4,6 +4,7 @@ Test module for RivineWallet js9 client
 
 from js9 import j
 import time
+import json
 
 
 from JumpScale9Lib.clients.blockchain.rivine.types.transaction import TransactionFactory
@@ -53,23 +54,54 @@ wallet._check_address(address=address)
 #sync the wallet
 assert type(wallet.current_balance) == float
 
-try:
+
+def test_send_money_with_locktime():
     recipient = '01b1e730f6c8d8ef0615c05e87075265cf27b929a20767e3e652b6d303e95205bdd61fdfb88925'
     data = b"Hello from Cairo!"
-    # transaction = wallet.send_money(amount=2, recipient=recipient, data=data, locktime=time.time() + 500)
-    current_height = wallet._get_current_chain_height()
-    # wallet.send_money(amount=2, recipient='01b1e730f6c8d8ef0615c05e87075265cf27b929a20767e3e652b6d303e95205bdd61fdfb88925', locktime=current_height + 5)
-    # transaction = wallet._create_transaction(amount=1000000000, recipient=recipient, sign_transaction=True, custom_data=data)
-    # transaction = wallet._create_transaction(amount=2000000000, recipient=recipient,minerfee=100000000, sign_transaction=True, custom_data=data, locktime=current_height + 5)
+    transaction = wallet.send_money(amount=2, recipient=recipient, data=data, locktime=time.time() + 500)
+    assert transaction.id is not None
+    return transaction
 
-    # transaction = wallet.send_money(amount=2, recipient=recipient)
-    # print(transaction.json)
-
-
-    # create a multi-sig transaction
+def test_send_to_many():
     unlockhashes = (bob_wallet.addresses[0], alice_wallet.addresses[0])
     multi_sig_txn = wallet.send_to_many(amount=5, recipients=unlockhashes, required_nr_of_signatures=2)
-    print(multi_sig_txn.json)
-finally:
-    import IPython
-    IPython.embed()
+    assert multi_sig_txn.id is not None
+    return multi_sig_txn
+
+
+
+def test_load_transaction_from_json():
+#     txn_json = """{"version": 1, "data": {"coininputs": [{"parentid": "5ff8302707e706d58cca5af07b22e80c1d9be7a72df5cb847ae8119d6572f69d", "ful
+# fillment": {"type": 1, "data": {"publickey": "ed25519:c340e07e21c64faba56290260f076f544cb2901c75a209a9a8ea307fed537979", "signature":
+# "7648792ae8961766933dc059539f6384a59cb7bcf5eea5f7bcc005e54fb236f3e438cbf308b92f379dc6da9686bf4bc993e38006acd865b4b12df2c4e803d902"}}}]
+# , "coinoutputs": [{"value": "5000000000", "condition": {"type": 4, "data": {"unlockhashes": ["01c1f24eb0792086567fe9e2b8d6c2a66cca733b
+# e2518fbac22ec8793da3b00b0759d37b6100bf", "016b0eb94e794ccfc596f0a181478f3ef9dfcc80046a2c33688ec3fa603ea67eb8643a7808e2ac"], "minimumsi
+# gnaturecount": 2}}}, {"value": "304399999980", "condition": {"type": 1, "data": {"unlockhash": "012bdb563a4b3b630ddf32f1fde8d97466376a
+# 67c0bc9a278c2fa8c8bd760d4dcb4b9564cdea6f"}}}], "minerfees": ["100000000"]}}"""
+
+    txn_json = """{"version": 1, "data": {"coininputs": [{"parentid": "5ff8302707e706d58cca5af07b22e80c1d9be7a72df5cb847ae8119d6572f69d", "fulfillment": {"type": 1, "data": {"publickey": "ed25519:c340e07e21c64faba56290260f076f544cb2901c75a209a9a8ea307fed537979", "signature": "7648792ae8961766933dc059539f6384a59cb7bcf5eea5f7bcc005e54fb236f3e438cbf308b92f379dc6da9686bf4bc993e38006acd865b4b12df2c4e803d902"}}}], "coinoutputs": [{"value": "304399999980", "condition": {"type": 1, "data": {"unlockhash": "012bdb563a4b3b630ddf32f1fde8d97466376a67c0bc9a278c2fa8c8bd760d4dcb4b9564cdea6f"}}}], "minerfees": ["100000000"]}}"""
+
+    txn = TransactionFactory.from_json(txn_json)
+    # import pdb; pdb.set_trace()
+    assert json.dumps(txn.json) == txn_json
+    return txn
+
+def test_create_multisig_wallet():
+    # bob and alice are cosigners
+    cosigners = [','.join(bob_wallet.addresses), ','.join(alice_wallet.addresses)]
+    required_sig = 2
+    multi_sig_client_data = {
+        'multisig': True,
+        'cosigners': cosigners,
+        'required_sig': required_sig,
+        'bc_address': client_data['bc_address'],
+        'password_': client_data['password_'],
+        'minerfee': client_data['minerfee']
+    }
+
+    multisig_wallet = j.clients.rivine.get('bob_and_alice_multisig_wallet', data=multi_sig_client_data).wallet
+    return multisig_wallet
+
+
+import IPython
+IPython.embed()

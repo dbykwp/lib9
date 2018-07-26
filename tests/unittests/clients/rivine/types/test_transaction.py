@@ -1,9 +1,9 @@
 """
-Unittests for module JumpScale9Lib.clients.rivine.types.transaction
+Unittests for module JumpScale9Lib.clients.blockchain.rivine.types.transaction
 """
 
-from JumpScale9Lib.clients.rivine.types.transaction import DEFAULT_TRANSACTION_VERSION, TransactionFactory, TransactionV1, CoinInput, CoinOutput
-from JumpScale9Lib.clients.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment
+from JumpScale9Lib.clients.blockchain.rivine.types.transaction import DEFAULT_TRANSACTION_VERSION, TransactionFactory, TransactionV1, CoinInput, CoinOutput
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment
 from unittest.mock import MagicMock
 
 

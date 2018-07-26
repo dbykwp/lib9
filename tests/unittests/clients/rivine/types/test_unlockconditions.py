@@ -1,12 +1,12 @@
 """
-Unittests for module JumpScale9Lib.clients.rivine.types.unlockconditions
+Unittests for module JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions
 """
 
-from JumpScale9Lib.clients.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment, AtomicSwapFulfillment, AtomicSwapCondition
-from JumpScale9Lib.clients.rivine.types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY
-from JumpScale9Lib.clients.rivine.types.signatures import Ed25519PublicKey
-from JumpScale9Lib.clients.rivine.errors import DoubleSignatureError
-from JumpScale9Lib.clients.rivine import utils
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment, AtomicSwapFulfillment, AtomicSwapCondition
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY
+from JumpScale9Lib.clients.blockchain.rivine.types.signatures import Ed25519PublicKey
+from JumpScale9Lib.clients.blockchain.rivine.errors import DoubleSignatureError
+from JumpScale9Lib.clients.blockchain.rivine import utils
 from unittest.mock import MagicMock
 import ed25519
 import pytest

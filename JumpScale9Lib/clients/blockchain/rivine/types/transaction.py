@@ -3,7 +3,7 @@ Module contianing all transaction types
 """
 from JumpScale9Lib.clients.blockchain.rivine.types.signatures import Ed25519PublicKey
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
- LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition, FulfillmentFactory
+ LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition, FulfillmentFactory, UnlockCondtionFactory
 from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 from JumpScale9Lib.clients.blockchain.rivine.utils import hash
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
@@ -53,8 +53,9 @@ class TransactionFactory:
                             co = CoinOutput.from_dict(co_info)
                             txn._coins_outputs.append(co)
                     if 'minerfees' in txn_data:
-                        for minerfee in txn_data['minersfees'] :
+                        for minerfee in txn_data['minerfees'] :
                             txn.add_minerfee(int(minerfee))
+        return txn
 
 
 
@@ -327,6 +328,20 @@ class CoinOutput:
         """
         self._value = value
         self._condition = condition
+
+
+    @classmethod
+    def from_dict(cls, co_info):
+        """
+        Creates a new CoinOutput from dict
+
+        @param co_info: JSON dict representing a coin output
+        """
+        if 'condition' in co_info:
+            condition = UnlockCondtionFactory.from_dict(co_info['condition'])
+            if 'value' in co_info:
+                return cls(value=int(co_info['value']),
+                           condition=condition)
 
 
     @property
