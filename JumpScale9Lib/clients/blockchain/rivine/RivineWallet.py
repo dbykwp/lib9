@@ -123,19 +123,7 @@ class RivineWallet:
         """
         Retrieves the current chain height
         """
-        result = None
-        url = '{}/explorer'.format(self._bc_network)
-        headers = {'user-agent': 'Rivine-Agent'}
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            msg = 'Failed to get current chain height. {}'.format(response.text)
-            logger.error(msg)
-            raise RESTAPIError(msg)
-        else:
-            result = response.json().get('height', None)
-            if result is not None:
-                result = int(result)
-        return result
+        return utils.get_current_chain_height(self._bc_network)
 
 
     def _check_address(self, address, log_errors=True):
@@ -148,18 +136,7 @@ class RivineWallet:
 
         @raises: @RESTAPIError if failed to check address
         """
-        result = None
-        url = '{}/explorer/hashes/{}'.format(self._bc_network, address)
-        headers = {'user-agent': 'Rivine-Agent'}
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            msg = "Failed to retrieve address information. {}".format(response.text.strip('\n'))
-            if log_errors:
-                logger.error(msg)
-            raise RESTAPIError(msg)
-        else:
-            result = response.json()
-        return result
+        return utils.check_address(self._bc_network, address, log_errors)
 
 
     def _check_balance(self):

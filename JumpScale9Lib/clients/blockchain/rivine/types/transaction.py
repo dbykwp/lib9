@@ -59,9 +59,6 @@ class TransactionFactory:
 
 
 
-
-
-
 class TransactionV1:
     """
     A Transaction is an atomic component of a block. Transactions can contain

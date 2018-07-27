@@ -3,15 +3,21 @@ Modules for common utilites
 """
 import re
 import string
-from pyblake2 import blake2b
+import requests
 from random import choice
-from .const import HASH_SIZE
-from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
+from pyblake2 import blake2b
+
+from JumpScale9 import j
 from JumpScale9Lib.clients.blockchain.rivine import secrets
+from JumpScale9Lib.clients.blockchain.rivine.const import HASH_SIZE
+from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
+from JumpScale9Lib.clients.blockchain.rivine.errors import RESTAPIError
 
 
 DURATION_REGX_PATTERN = '^(?P<hours>\d*)h(?P<minutes>\d*)m(?P<seconds>\d*)s$'
 DURATION_TEMPLATE = 'XXhXXmXXs'
+
+logger = j.logger.get(__name__)
 
 def hash(data, encoding_type=None):
     """
@@ -62,3 +68,45 @@ def get_secret(size):
     #     result.append(choice(alphapet))
     # return ''.join(result)
     return secrets.token_bytes(nbytes=size)
+
+
+def get_current_chain_height(rivine_explorer_address):
+    """
+    Retrieves the current chain height
+    """
+    result = None
+    url = '{}/explorer'.format(rivine_explorer_address.strip('/'))
+    headers = {'user-agent': 'Rivine-Agent'}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        msg = 'Failed to get current chain height. {}'.format(response.text)
+        logger.error(msg)
+        raise RESTAPIError(msg)
+    else:
+        result = response.json().get('height', None)
+        if result is not None:
+            result = int(result)
+    return result
+
+
+def check_address(rivine_explorer_address, address, log_errors=True):
+    """
+    Check if an address is valid and return its details
+
+    @param address: Address to check
+    @param log_errors: If False, no logging will be executed
+
+    @raises: @RESTAPIError if failed to check address
+    """
+    result = None
+    url = '{}/explorer/hashes/{}'.format(rivine_explorer_address, address)
+    headers = {'user-agent': 'Rivine-Agent'}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        msg = "Failed to retrieve address information. {}".format(response.text.strip('\n'))
+        if log_errors:
+            logger.error(msg)
+        raise RESTAPIError(msg)
+    else:
+        result = response.json()
+    return result
