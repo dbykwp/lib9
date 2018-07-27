@@ -101,7 +101,7 @@ setup(
         'ipcalc>=1.99.0',
         'ed25519>=1.4',
         'pyghmi==1.0.44',
-        'python-jose>=1.3.2',
+        'python-jose>=2.0.1',
     ],
     cmdclass={
         'install': install,

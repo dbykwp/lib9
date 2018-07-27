@@ -74,7 +74,7 @@ class RamlToolsFactory(JSBASE):
             itsdangerous==0.24
             jsonschema==2.5.1
             six==1.10.0
-            python-jose==1.3.2
+            python-jose>=2.0.1
             '''
             j.tools.prefab.local.runtimes.pip.install(pips)
 
