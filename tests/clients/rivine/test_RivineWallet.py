@@ -105,8 +105,24 @@ def test_create_multisig_wallet():
     # address_info = wallet._check_address(address)
     # outputs = utils.collect_transaction_outputs(wallet._get_current_chain_height(), address=address, transactions=address_info['transactions'])
     # print(outputs)
-    multisig_wallet._get_unspent_outputs()
+    # multisig_wallet._get_unspent_outputs()
     return multisig_wallet
+
+def test_create_multisig_txn():
+    multisig_wallet = test_create_multisig_wallet()
+    amount = 0.7
+    recipient = wallet.addresses[0]
+    txn_json = multisig_wallet.create_transaction(amount=amount,
+                                                   recipient=recipient)
+    return txn_json
+
+def test_sign_multisig_txn():
+    txn_json = test_create_multisig_txn()
+    txn = j.clients.rivine.create_transaction_from_json(txn_json)
+    txn = alice_wallet.sign_transaction(transaction=txn, multisig=True)
+    txn = bob_wallet.sign_transaction(transaction=txn, multisig=True, commit=True)
+    return txn
+
 
 
 import IPython

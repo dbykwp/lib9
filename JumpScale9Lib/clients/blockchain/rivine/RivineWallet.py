@@ -16,7 +16,6 @@ from functools import partial
 import requests
 import base64
 import time
-from requests.auth import HTTPBasicAuth
 from .encoding import binary
 from .types.signatures import Ed25519PublicKey, SPECIFIER_SIZE
 from .types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY, UNLOCKHASH_SIZE, UNLOCKHASH_CHECKSUM_SIZE
@@ -102,6 +101,7 @@ class RivineWallet:
             cl.config.save()
 
         return address
+
 
     def _generate_spendable_key(self, index):
         """
@@ -450,6 +450,39 @@ class RivineWallet:
         @param transaction: Transaction object to be committed
         """
         return utils.commit_transaction(self._bc_network, self._bc_network_password, transaction)
+
+
+    def sign_transaction(self, transaction, multisig=False, commit=False):
+        """
+        Signs a transaction and optionally push it to the blockchain
+
+        @param transaction: Transaction object
+        @param multisig: If True, it indicates that the transaction contains multisig inputs
+        @param commit: If True, the transaction will be pushed to the chain after being signed
+        """
+        if not multisig:
+            self._sign_transaction(transaction=transaction)
+        else:
+            current_height = self._get_current_chain_height()
+            for index, ci in enumerate(transaction.coins_inputs):
+                output_info = self._check_address(ci._parent_id)
+                for txn_info in output_info['transactions']:
+                    for co in txn_info['rawtransaction']['data']['coinoutputs']:
+                        ulhs = utils.get_unlockhash_from_output(output=co,
+                                                                address=ci._parent_id,
+                                                                current_height=current_height)
+                        ulh = list(set(self.addresses).intersection(ulhs['unlocked']))
+                        if ulh:
+                            ulh = ulh[0]
+                            key = self._keys[ulh]
+                            ci.sign(input_idx=index, transaction=transaction, secret_key=key.secret_key)
+                        else:
+                            logger.warn("Failed to retrieve unlockhash related to input {}".format(ci))
+
+        if commit:
+            self._commit_transaction(transaction=transaction)
+
+        return transaction
 
 
 class SpendableKey:

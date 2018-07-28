@@ -1,6 +1,8 @@
 """
 Module that defines required classes for Mulitsignature wallets
 """
+import json
+
 from JumpScale9 import j
 from JumpScale9Lib.clients.blockchain.rivine import const
 from JumpScale9Lib.clients.blockchain.rivine import utils
@@ -8,6 +10,7 @@ from JumpScale9Lib.clients.blockchain.rivine.merkletree import Tree
 from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 from JumpScale9Lib.clients.blockchain.rivine.errors import RESTAPIError, InsufficientWalletFundsError
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash, UNLOCK_TYPE_MULTISIG
+from JumpScale9Lib.clients.blockchain.rivine.types.transaction import TransactionFactory, DEFAULT_TRANSACTION_VERSION
 
 logger = j.logger.get(__name__)
 
@@ -56,8 +59,10 @@ class RivineMultiSignatureWallet:
 
         for _, output_info in self._unspent_outputs['unlocked'].items():
             result['unlocked'] += int(output_info['value'])
-        return result
+        result['locked'] /= const.HASTINGS_TFT_VALUE
+        result['unlocked'] /= const.HASTINGS_TFT_VALUE
 
+        return result
 
 
     @property
@@ -163,23 +168,50 @@ class RivineMultiSignatureWallet:
             raise InsufficientWalletFundsError('No sufficient funds to make the transaction')
 
         result = []
-        input_value = 0
-        used_addresses = {}
+        value_output_id_map = {}
         for output_id, unspent_coin_output in self._unspent_outputs['unlocked'].items():
-            # if we reach the required funds, then break
-            if input_value >= required_funds:
+            value_output_id_map[int(unspent_coin_output['value'])] = output_id
+        for value in sorted(value_output_id_map.keys()):
+            result = []
+            input_value = 0
+            while input_value < required_funds:
+                input_value += value
+                result.append(value_output_id_map[value])
+            if input_value == required_funds:
                 break
-            input_result = {}
-            ulh = utils.get_unlockhash_from_output(output=unspent_coin_output, address=address)
+        if input_value != required_funds:
+            raise RuntimeError("Cannot match unspent outputs values to the the sum of (amount + minerfee)={}".format(required_funds))
+        return result
 
-            if not ulh:
-                raise RuntimeError('Cannot retrieve unlockhash')
 
-            # used_addresses.append(ulh)
-            used_addresses[address] = ulh
-            input_result['parent_id'] = address
-            input_result['pub_key'] = self._keys[ulh].public_key
+    def create_transaction(self, amount, recipient, minerfee=None, data=None, locktime=None):
+        """
+        Create a transaction spending one/more multisignature output(s)
 
-            input_value += int(unspent_coin_output['value'])
-            result.append(input_result)
-        return result, used_addresses, minerfee, (input_value - required_funds)
+        @param amount: The amount needed to be transfered in TF Tokens
+        @param recipient: Address of the recipient.
+        @param minerfee: The minerfee for this transaction in TF Tokens
+        @param data: Custom data to add to the transaction record
+        @param locktime: Identifies the height or timestamp until which this transaction is locked
+        """
+        if minerfee is None:
+            minerfee = self._minerfee
+        else:
+            minerfee = minerfee * const.HASTINGS_TFT_VALUE
+        amount = int(amount * const.HASTINGS_TFT_VALUE)
+        inputs = self._get_inputs(amount=amount,
+                                  minerfee=minerfee)
+
+        transaction = TransactionFactory.create_transaction(version=DEFAULT_TRANSACTION_VERSION)
+
+        if data is not None:
+            transaction.add_data(data)
+        transaction.add_minerfee(minerfee)
+        
+        for input in inputs:
+            # create an input with multisig fulfillment
+            transaction.add_multisig_input(parent_id=input)
+
+        transaction.add_coin_output(value=amount, recipient=recipient, locktime=locktime)
+
+        return json.dumps(transaction.json)

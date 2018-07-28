@@ -7,6 +7,7 @@ import string
 import requests
 from random import choice
 from pyblake2 import blake2b
+from requests.auth import HTTPBasicAuth
 
 from JumpScale9 import j
 from JumpScale9Lib.clients.blockchain.rivine import secrets

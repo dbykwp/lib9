@@ -3,7 +3,7 @@ Module contianing all transaction types
 """
 from JumpScale9Lib.clients.blockchain.rivine.types.signatures import Ed25519PublicKey
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import SingleSignatureFulfillment, UnlockHashCondition,\
- LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition, FulfillmentFactory, UnlockCondtionFactory
+ LockTimeCondition, AtomicSwapCondition, AtomicSwapFulfillment, MultiSignatureCondition, FulfillmentFactory, UnlockCondtionFactory, MultiSignatureFulfillment
 from JumpScale9Lib.clients.blockchain.rivine.encoding import binary
 from JumpScale9Lib.clients.blockchain.rivine.utils import hash
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
@@ -154,6 +154,14 @@ class TransactionV1:
         """
         key = Ed25519PublicKey(pub_key=pub_key)
         fulfillment = AtomicSwapFulfillment(pub_key=key, secret=secret)
+        self._coins_inputs.append(CoinInput(parent_id=parent_id, fulfillment=fulfillment))
+
+
+    def add_multisig_input(self, parent_id):
+        """
+        Adds a new coin input with an empty MultiSignatureFulfillment
+        """
+        fulfillment = MultiSignatureFulfillment()
         self._coins_inputs.append(CoinInput(parent_id=parent_id, fulfillment=fulfillment))
 
 
