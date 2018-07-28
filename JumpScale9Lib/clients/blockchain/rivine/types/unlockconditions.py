@@ -7,8 +7,6 @@ from JumpScale9Lib.clients.blockchain.rivine.errors import DoubleSignatureError
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
 from JumpScale9Lib.clients.blockchain.rivine.types.signatures import SiaPublicKeyFactory
 
-# this is the value if the locktime is less than it, it means that the locktime should be interpreted as the chain height lock instead of the timestamp
-TIMELOCK_CONDITION_HEIGHT_LIMIT = 5000000
 ATOMICSWAP_CONDITION_TYPE = bytearray([2])
 MULTISIG_CONDITION_TYPE = bytearray([4])
 
@@ -253,7 +251,6 @@ class AtomicSwapCondition:
         }
 
 
-
 class LockTimeCondition:
     """
     LockTimeCondition class
@@ -302,7 +299,6 @@ class LockTimeCondition:
                 'condition': self._condition.json
             }
         }
-
 
 
 class UnlockHashCondition:

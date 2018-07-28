@@ -19,16 +19,15 @@ import time
 from requests.auth import HTTPBasicAuth
 from .encoding import binary
 from .types.signatures import Ed25519PublicKey, SPECIFIER_SIZE
-from .types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY, UNLOCKHASH_TYPE, UNLOCKHASH_SIZE, UNLOCKHASH_CHECKSUM_SIZE
+from .types.unlockhash import UnlockHash, UNLOCK_TYPE_PUBKEY, UNLOCKHASH_SIZE, UNLOCKHASH_CHECKSUM_SIZE
 
 from JumpScale9 import j
 from JumpScale9Lib.clients.blockchain.rivine import utils
 from JumpScale9Lib.clients.blockchain.rivine.atomicswap.atomicswap import AtomicSwapManager
 from JumpScale9Lib.clients.blockchain.rivine.types.transaction import TransactionFactory, DEFAULT_TRANSACTION_VERSION
 from JumpScale9Lib.clients.blockchain.rivine.types.unlockhash import UnlockHash
-from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import TIMELOCK_CONDITION_HEIGHT_LIMIT
 
-from .const import MINER_PAYOUT_MATURITY_WINDOW, WALLET_ADDRESS_TYPE, ADDRESS_TYPE_SIZE, HASTINGS_TFT_VALUE
+from .const import MINER_PAYOUT_MATURITY_WINDOW, WALLET_ADDRESS_TYPE, ADDRESS_TYPE_SIZE, HASTINGS_TFT_VALUE, UNLOCKHASH_TYPE
 
 from .errors import RESTAPIError, BackendError,\
 InsufficientWalletFundsError, NonExistingOutputError,\
@@ -162,7 +161,10 @@ class RivineWallet:
                 self._collect_miner_fees(address=address, blocks=address_info.get('blocks',{}),
                                         height=current_chain_height)
                 transactions = address_info.get('transactions', {})
-                self._collect_transaction_outputs(address=address, transactions=transactions, unconfirmed_txs=unconfirmed_txs)
+                self._collect_transaction_outputs(current_height=current_chain_height,
+                                                  address=address,
+                                                  transactions=transactions,
+                                                  unconfirmed_txs=unconfirmed_txs)
         # remove spent inputs after collection all the inputs
         for address, address_info in self._addresses_info.items():
             self._remove_spent_inputs(transactions = address_info.get('transactions', {}))
@@ -176,51 +178,20 @@ class RivineWallet:
         @param blocks: Blocks from an address
         @param height: The current chain height
         """
-        if blocks is None:
-            blocks = {}
-        for block_info in blocks:
-            if block_info.get('height', None) and block_info['height'] + MINER_PAYOUT_MATURITY_WINDOW >= height:
-                logger.info('Ignoring miner payout that has not matured yet')
-                continue
-            # mineroutputs can exist in the dictionary but with value None
-            mineroutputs = block_info.get('rawblock', {}).get('minerpayouts', [])
-            if mineroutputs:
-                for index, minerpayout in enumerate(mineroutputs):
-                    if minerpayout.get('unlockhash') == address:
-                        logger.info('Found miner output with value {}'.format(minerpayout.get('value')))
-                        self._unspent_coins_outputs[block_info['minerpayoutids'][index]] = {
-                            'value': minerpayout['value'],
-                            'condition':{
-                                'data': {
-                                    'unlockhash': address
-                                }
-                            }
-                        }
+        self._unspent_coins_outputs.update(utils.collect_miner_fees(address, blocks, height))
 
 
-    def _collect_transaction_outputs(self, address, transactions, unconfirmed_txs=None):
+    def _collect_transaction_outputs(self, current_height, address, transactions, unconfirmed_txs=None):
         """
         Collects transactions outputs
 
+        @param current_height: Current chain height
         @param address: address to collect transactions outputs
         @param transactions: Details about the transactions
         @param unconfirmed_txs: List of unconfirmed transactions
         """
-        if unconfirmed_txs is None:
-            unconfirmed_txs = []
-        for txn_info in transactions:
-            # coinoutputs can exist in the dictionary but has the value None
-            coinoutputs = txn_info.get('rawtransaction', {}).get('data', {}).get('coinoutputs', [])
-            if coinoutputs:
-                for index, utxo in enumerate(coinoutputs):
-                    condition_ulh = self._get_unlockhash_from_output(output=utxo, address=address)
-
-                    if condition_ulh == address:
-                        logger.debug('Found transaction output for address {}'.format(address))
-                        if txn_info['coinoutputids'][index] in unconfirmed_txs:
-                            logger.warn("Transaction output is part of an unconfirmed tansaction. Ignoring it...")
-                            continue
-                        self._unspent_coins_outputs[txn_info['coinoutputids'][index]] = utxo
+        unlocked_txn_outputs = utils.collect_transaction_outputs(current_height, address, transactions, unconfirmed_txs)['unlocked']
+        self._unspent_coins_outputs.update(unlocked_txn_outputs)
 
 
     def _remove_spent_inputs(self, transactions):
@@ -229,14 +200,7 @@ class RivineWallet:
 
         @param transactions: Details about the transactions
         """
-        for txn_info in transactions:
-            # cointinputs can exist in the dict but have the value None
-            coininputs = txn_info.get('rawtransaction', {}).get('data', {}).get('coininputs', [])
-            if coininputs:
-                for coin_input in coininputs:
-                    if coin_input.get('parentid') in self._unspent_coins_outputs:
-                        logger.debug('Found a spent address {}'.format(coin_input.get('parentid')))
-                        del self._unspent_coins_outputs[coin_input.get('parentid')]
+        utils.remove_spent_inputs(self._unspent_coins_outputs, transactions)
 
 
     def _get_unconfirmed_transactions(self, format_inputs=False):
@@ -259,23 +223,7 @@ class RivineWallet:
                'data': {'unlockhash': '012bdb563a4b3b630ddf32f1fde8d97466376a67c0bc9a278c2fa8c8bd760d4dcb4b9564cdea6f'}}}],
             'minerfees': ['100000000']}}]}
         """
-        result = []
-        url = "{}/transactionpool/transactions".format(self._bc_network)
-        headers = {'user-agent': 'Rivine-Agent'}
-        auth = HTTPBasicAuth('', self._bc_network_password)
-        res = requests.get(url, headers=headers, auth=auth)
-        if res.status_code != 200:
-            msg = 'Failed to retrieve unconfirmed transactions. Error: {}'.format(res.text)
-            logger.error(msg)
-            raise BackendError(msg)
-        transactions = res.json()['transactions']
-        if transactions is None:
-            transactions = []
-        if format_inputs:
-            for txn in transactions:
-                result.extend([coininput['parentid'] for coininput in txn['data']['coininputs']])
-            return result
-        return transactions
+        return utils.get_unconfirmed_transactions(self._bc_network, format_inputs=format_inputs)
 
 
     def send_money(self, amount, recipient, data=None, locktime=None):
@@ -352,7 +300,7 @@ class RivineWallet:
             input_result = {}
             ulh = self._get_unlockhash_from_output(output=unspent_coin_output, address=address)
 
-            if ulh is None:
+            if not ulh:
                 raise RuntimeError('Cannot retrieve unlockhash')
 
             # used_addresses.append(ulh)
@@ -417,7 +365,6 @@ class RivineWallet:
         return transaction
 
 
-
     def _create_transaction(self, amount, recipient, minerfee=None, sign_transaction=True, custom_data=None, locktime=None):
         """
         Creates new transaction and sign it
@@ -475,35 +422,8 @@ class RivineWallet:
         """
         Retrieves unlockhash from coin output. This should handle different types of output conditions and transaction formats
         """
-        ulh = None
-        # support both v0 and v1 tnx format
-        if 'unlockhash' in output:
-            # v0 transaction format
-            ulh = output['unlockhash']
-        elif 'condition' in output:
-            # v1 transaction format
-            # check condition type
-            if output['condition'].get('type') == 1:
-                # unlockhash condition type
-                ulh = output['condition']['data']['unlockhash']
-            elif output['condition'].get('type') == 3:
-                # timelock condition, right now we only support timelock condition with internal unlockhash condition
-                locktime = output['condition']['data']['locktime']
-                if locktime < TIMELOCK_CONDITION_HEIGHT_LIMIT:
-                    # locktime should be checked againest the current chain height
-                    current_height = self._get_current_chain_height()
-                    if current_height > locktime:
-                        ulh = output['condition']['data']['condition']['data'].get('unlockhash')
-                    else:
-                        logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
-                else:
-                    # locktime represent timestamp
-                    if locktime < time.time():
-                        ulh = output['condition']['data']['condition']['data'].get('unlockhash')
-                    else:
-                        logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
-
-        return ulh
+        ulh = utils.get_unlockhash_from_output(output, address, current_height=self._get_current_chain_height())
+        return ulh['unlocked'][0] if ulh['unlocked'] else None
 
 
     def _sign_transaction(self, transaction):
@@ -529,19 +449,7 @@ class RivineWallet:
 
         @param transaction: Transaction object to be committed
         """
-        data = transaction.json
-        url = '{}/transactionpool/transactions'.format(self._bc_network)
-        headers = {'user-agent': 'Rivine-Agent'}
-        auth = HTTPBasicAuth('', self._bc_network_password)
-        res = requests.post(url, headers=headers, auth=auth, json=data)
-        if res.status_code != 200:
-            msg = 'Faield to commit transaction to chain network.{}'.format(res.text)
-            logger.error(msg)
-            raise BackendError(msg)
-        else:
-            transaction.id = res.json()['transactionid']
-            logger.info('Transaction committed successfully')
-            return transaction.id
+        return utils.commit_transaction(self._bc_network, self._bc_network_password, transaction)
 
 
 class SpendableKey:

@@ -8,6 +8,7 @@ import json
 
 
 from JumpScale9Lib.clients.blockchain.rivine.types.transaction import TransactionFactory
+from JumpScale9Lib.clients.blockchain.rivine import utils
 # txn = TransactionFactory.create_transaction(1)
 # txn.add_data(bytearray('ot', encoding='utf-8'))
 # txn.add_data(b'ot')
@@ -100,6 +101,11 @@ def test_create_multisig_wallet():
     }
 
     multisig_wallet = j.clients.rivine.get('bob_and_alice_multisig_wallet', data=multi_sig_client_data).wallet
+    # address = multisig_wallet.addresses[0]
+    # address_info = wallet._check_address(address)
+    # outputs = utils.collect_transaction_outputs(wallet._get_current_chain_height(), address=address, transactions=address_info['transactions'])
+    # print(outputs)
+    multisig_wallet._get_unspent_outputs()
     return multisig_wallet
 
 

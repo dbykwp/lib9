@@ -161,7 +161,7 @@ def test_atomicswapcondition_json(ulh, ats_hashed_secret):
     assert atsc.json == expected_output, "Failed to generate the expected json value of AtomicSwapCondition"
 
 
-def test_atomicswapcondition_json(ulh, ats_hashed_secret):
+def test_atomicswapcondition_binary(ulh, ats_hashed_secret):
     """
     Tests the generation of binary encoded version of the AtomicswapCondition object
     """
