@@ -32,6 +32,8 @@ rivine_client.config.save()
 
 bob_seed = 'easily comic language galaxy chalk near member project mind noodle height rice box famous before cancel traffic festival laugh exist trend ensure claw fish'
 alice_seed = 'green industry hockey scrap below film stage fashion volcano quantum pilot sea fan reunion critic rack cover toy never warrior typical episode seed divide'
+carlos_seed = 'basic ranch raise cattle giraffe boost joy release jazz gaze friend program warfare switch design outer excess echo phrase visual woman coyote bid genuine'
+sam_seed = 'marine company planet empty marble salon summer van skirt valid venture drastic breeze cushion detect catalog radar thing renew magnet resource movie hill harsh'
 
 client_data['seed_'] = bob_seed
 bob_wallet = j.clients.rivine.get('bobwallet', data=client_data).wallet
@@ -39,6 +41,12 @@ bob_wallet = j.clients.rivine.get('bobwallet', data=client_data).wallet
 
 client_data['seed_'] = alice_seed
 alice_wallet = j.clients.rivine.get('alicewallet', data=client_data).wallet
+
+client_data['seed_'] = carlos_seed
+carlos_wallet = j.clients.rivine.get('carlos_wallet', data=client_data).wallet
+
+client_data['seed_'] = sam_seed
+sam_wallet = j.clients.rivine.get('sam_wallet', data=client_data).wallet
 
 
 
@@ -58,17 +66,23 @@ assert type(wallet.current_balance) == float
 
 def test_send_money_with_locktime():
     recipient = '01b1e730f6c8d8ef0615c05e87075265cf27b929a20767e3e652b6d303e95205bdd61fdfb88925'
-    data = b"Hello from Cairo!"
+    data = b"Hello from Dresden!"
     transaction = wallet.send_money(amount=2, recipient=recipient, data=data, locktime=time.time() + 500)
     assert transaction.id is not None
     return transaction
 
 def test_send_to_many():
-    unlockhashes = (bob_wallet.addresses[0], alice_wallet.addresses[0])
+    unlockhashes = (bob_wallet.addresses[0], alice_wallet.addresses[0], carlos_wallet.addresses[0], sam_wallet.addresses[0])
     multi_sig_txn = wallet.send_to_many(amount=5, recipients=unlockhashes, required_nr_of_signatures=2)
     assert multi_sig_txn.id is not None
     return multi_sig_txn
 
+def test_send_to_many_with_locktime():
+    unlockhashes = (bob_wallet.addresses[0], alice_wallet.addresses[0], carlos_wallet.addresses[0], sam_wallet.addresses[0])
+    locktime = int(time.time() + 15 * 60) # 15 minutes locktime
+    multi_sig_txn = wallet.send_to_many(amount=2, recipients=unlockhashes, required_nr_of_signatures=3, locktime=locktime)
+    assert multi_sig_txn.id is not None
+    return multi_sig_txn
 
 
 def test_load_transaction_from_json():
@@ -89,8 +103,9 @@ def test_load_transaction_from_json():
 
 def test_create_multisig_wallet():
     # bob and alice are cosigners
-    cosigners = [','.join(bob_wallet.addresses), ','.join(alice_wallet.addresses)]
-    required_sig = 2
+    cosigners = [','.join(bob_wallet.addresses), ','.join(alice_wallet.addresses),
+                ','.join(carlos_wallet.addresses), ','.join(sam_wallet.addresses)]
+    required_sig = 3
     multi_sig_client_data = {
         'multisig': True,
         'cosigners': cosigners,
@@ -100,7 +115,7 @@ def test_create_multisig_wallet():
         'minerfee': client_data['minerfee']
     }
 
-    multisig_wallet = j.clients.rivine.get('bob_and_alice_multisig_wallet', data=multi_sig_client_data).wallet
+    multisig_wallet = j.clients.rivine.get('bob_alice_carlos_and_sam_multisig_wallet', data=multi_sig_client_data).wallet
     # address = multisig_wallet.addresses[0]
     # address_info = wallet._check_address(address)
     # outputs = utils.collect_transaction_outputs(wallet._get_current_chain_height(), address=address, transactions=address_info['transactions'])
@@ -110,7 +125,7 @@ def test_create_multisig_wallet():
 
 def test_create_multisig_txn():
     multisig_wallet = test_create_multisig_wallet()
-    amount = 0.7
+    amount = 1.9
     recipient = wallet.addresses[0]
     txn_json = multisig_wallet.create_transaction(amount=amount,
                                                    recipient=recipient)
@@ -120,6 +135,7 @@ def test_sign_multisig_txn():
     txn_json = test_create_multisig_txn()
     txn = j.clients.rivine.create_transaction_from_json(txn_json)
     txn = alice_wallet.sign_transaction(transaction=txn, multisig=True)
+    txn = sam_wallet.sign_transaction(transaction=txn, multisig=True)
     txn = bob_wallet.sign_transaction(transaction=txn, multisig=True, commit=True)
     return txn
 

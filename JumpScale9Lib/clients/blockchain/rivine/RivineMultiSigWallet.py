@@ -169,19 +169,26 @@ class RivineMultiSignatureWallet:
 
         result = []
         value_output_id_map = {}
+        output_values = []
+        # create a map with the value and the corresponding input ids list
+        # also create a flat list of the values (to allow duplicate values in the list)
         for output_id, unspent_coin_output in self._unspent_outputs['unlocked'].items():
-            value_output_id_map[int(unspent_coin_output['value'])] = output_id
-        for value in sorted(value_output_id_map.keys()):
-            result = []
-            input_value = 0
-            while input_value < required_funds:
-                input_value += value
-                result.append(value_output_id_map[value])
-            if input_value == required_funds:
-                break
-        if input_value != required_funds:
+            value = int(unspent_coin_output['value'])
+            if value not in value_output_id_map:
+                value_output_id_map[value] = []
+            value_output_id_map[value].append(output_id)
+            output_values.append(value)
+        result_values = utils.find_subset_sum(output_values, required_funds)
+
+        # once we got the values that sum up to the required funds, we retrieve the input ids from the map
+        if not result_values:
             raise RuntimeError("Cannot match unspent outputs values to the the sum of (amount + minerfee)={}".format(required_funds))
+
+        for result_value in result_values:
+            result.append(value_output_id_map[result_value].pop())
+
         return result
+
 
 
     def create_transaction(self, amount, recipient, minerfee=None, data=None, locktime=None):
@@ -207,7 +214,7 @@ class RivineMultiSignatureWallet:
         if data is not None:
             transaction.add_data(data)
         transaction.add_minerfee(minerfee)
-        
+
         for input in inputs:
             # create an input with multisig fulfillment
             transaction.add_multisig_input(parent_id=input)

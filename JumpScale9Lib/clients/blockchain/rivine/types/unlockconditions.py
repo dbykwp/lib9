@@ -101,8 +101,8 @@ class MultiSignatureFulfillment:
         if "pairs" in data:
             for pair in data['pairs']:
                 if 'publickey' in pair and 'signature' in pair:
-                    f.add_signature_pair(public_key=pair['publickey'],
-                                        signature=pair['signature'])
+                    f.add_signature_pair(public_key=SiaPublicKeyFactory.from_string(pair['publickey']),
+                                        signature=bytearray.fromhex(pair['signature']))
         return f
 
 
@@ -220,6 +220,25 @@ class MultiSignatureCondition:
         self._unlockhashes = unlockhashes
         self._min_nr_sig = min_nr_sig
         self._type = MULTISIG_CONDITION_TYPE
+
+    @property
+    def type(self):
+        """
+        Retruns the condition type
+        """
+        return self._type
+
+    @property
+    def data(self):
+        """
+        Retruns the binary format of the data on the condition
+        """
+        result = bytearray()
+        result.extend(binary.encode(self._min_nr_sig))
+        result.extend(binary.encode(len(self._unlockhashes)))
+        for unlockhash in self._unlockhashes:
+            result.extend(binary.encode(UnlockHash.from_string(unlockhash)))
+        return result
 
 
     @property

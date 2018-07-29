@@ -212,8 +212,22 @@ def get_unlockhash_from_output(output, address, current_height):
                         result['locked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
             else:
                 # locktime represent timestamp
-                if locktime < time.time():
-                    ulh = output['condition']['data']['condition']['data'].get('unlockhash')
+                current_time = time.time()
+                if locktime < current_time:
+                    if output['condition']['data']['condition']['type'] == 1:
+                        # locktime should be checked against the current time
+                        if current_time > locktime:
+                            result['unlocked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
+                        else:
+                            logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
+                            result['locked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
+                    elif output['condition']['data']['condition']['type'] == 4:
+                        # locktime should be checked against the current time
+                        if current_time > locktime:
+                            result['unlocked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
+                        else:
+                            logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
+                            result['locked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
                 else:
                     logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
         elif output['condition'].get('type') == 4:
@@ -302,3 +316,38 @@ def remove_spent_inputs(unspent_coins_outputs, transactions):
                 if coin_input.get('parentid') in unspent_coins_outputs:
                     logger.debug('Found a spent address {}'.format(coin_input.get('parentid')))
                     del unspent_coins_outputs[coin_input.get('parentid')]
+
+
+def find_subset_sum(values, target):
+    """
+    Find a subset of the values that sums to the target number
+    This implements a dynamic programming approach to the subset sum problem
+    Implementation is taken from: https://github.com/saltycrane/subset-sum/blob/master/subsetsum/stackoverflow.py
+
+    @param values: List of integers
+    @param target: The sum that we need to find a subset to equal to it.
+    """
+    def g(v, w, S, memo):
+        subset = []
+        id_subset = []
+        for i, (x, y) in enumerate(zip(v, w)):
+            # Check if there is still a solution if we include v[i]
+            if f(v, i + 1, S - x, memo) > 0:
+                subset.append(x)
+                id_subset.append(y)
+                S -= x
+        return subset, id_subset
+
+
+    def f(v, i, S, memo):
+        if i >= len(v):
+            return 1 if S == 0 else 0
+        if (i, S) not in memo:    # <-- Check if value has not been calculated.
+            count = f(v, i + 1, S, memo)
+            count += f(v, i + 1, S - v[i], memo)
+            memo[(i, S)] = count  # <-- Memoize calculated result.
+        return memo[(i, S)]       # <-- Return memoized value.
+
+    memo = dict()
+    result, _ = g(values, values, target, memo)
+    return result

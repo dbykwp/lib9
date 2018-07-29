@@ -2,10 +2,21 @@
 Unittests for module JumpScale9Lib.clients.blockchain.rivine.types.transaction
 """
 
-from JumpScale9Lib.clients.blockchain.rivine.types.transaction import DEFAULT_TRANSACTION_VERSION, TransactionFactory, TransactionV1, CoinInput, CoinOutput
-from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment
+import json
 from unittest.mock import MagicMock
 
+from JumpScale9Lib.clients.blockchain.rivine.types.transaction import DEFAULT_TRANSACTION_VERSION, TransactionFactory, TransactionV1, CoinInput, CoinOutput
+from JumpScale9Lib.clients.blockchain.rivine.types.unlockconditions import UnlockHashCondition, LockTimeCondition, SingleSignatureFulfillment
+
+
+def test_create_transaction_from_json():
+    """
+    Tests creating a transaction from a json string
+    """
+    txn_json = """{"version": 1, "data": {"coininputs": [{"parentid": "ae8d24095a01c7fc9a3cb0ba4720dc1b75acd73232abd1b9563ef0c26751f87d", "fulfillment": {"type": 3, "data": {"pairs": [{"publickey": "ed25519:1ad8c5878b594121b38652f2c2936f89d7dd66839b244cc3a14c05055efd358d", "signature": "c3347bf04a75588e9bbabd058eae2204c98bbc30ea8660036abd6924a6f4a78b57c6f7f39abc0db67c1826c9616c4abe4a353f9d87e66f5697931b2ce1844d04"}, {"publickey": "ed25519:903ef10891dea576512b76af4a90af86c71c7ec91095874862084683c3f236b3", "signature": "28275ef0579dd160839d73d9e8bc7ab41e53f1c6d255205ea78ce40753f7208d29eab888f74d759269c51f9404ea9b3f527ee3b86f2f1b49ba32fb3d82ebbd0c"}]}}}], "coinoutputs": [{"value": "1900000000", "condition": {"type": 1, "data": {"unlockhash": "0112a94261f6e4ef5bf0c8413b7bf318174810c9015fac8550b55d315061baccd2c464ae42baf0"}}}], "minerfees": ["100000000"]}}"""
+    txn = TransactionFactory.from_json(txn_json)
+
+    assert json.dumps(txn.json) == txn_json
 
 def test_create_transaction_v1():
     """

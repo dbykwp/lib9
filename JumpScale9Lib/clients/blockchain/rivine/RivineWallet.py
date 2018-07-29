@@ -477,7 +477,7 @@ class RivineWallet:
                             key = self._keys[ulh]
                             ci.sign(input_idx=index, transaction=transaction, secret_key=key.secret_key)
                         else:
-                            logger.warn("Failed to retrieve unlockhash related to input {}".format(ci))
+                            logger.warn("Failed to retrieve unlockhash related to input {}".format(ci._parent_id))
 
         if commit:
             self._commit_transaction(transaction=transaction)
