@@ -134,9 +134,9 @@ def test_create_multisig_txn():
 def test_sign_multisig_txn():
     txn_json = test_create_multisig_txn()
     txn = j.clients.rivine.create_transaction_from_json(txn_json)
-    txn = alice_wallet.sign_transaction(transaction=txn, multisig=True)
-    txn = sam_wallet.sign_transaction(transaction=txn, multisig=True)
-    txn = bob_wallet.sign_transaction(transaction=txn, multisig=True, commit=True)
+    alice_wallet.sign_transaction(transaction=txn, multisig=True)
+    sam_wallet.sign_transaction(transaction=txn, multisig=True)
+    bob_wallet.sign_transaction(transaction=txn, multisig=True, commit=True)
     return txn
 
 

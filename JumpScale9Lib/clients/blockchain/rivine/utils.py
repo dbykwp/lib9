@@ -213,23 +213,21 @@ def get_unlockhash_from_output(output, address, current_height):
             else:
                 # locktime represent timestamp
                 current_time = time.time()
-                if locktime < current_time:
-                    if output['condition']['data']['condition']['type'] == 1:
-                        # locktime should be checked against the current time
-                        if current_time > locktime:
-                            result['unlocked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
-                        else:
-                            logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
-                            result['locked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
-                    elif output['condition']['data']['condition']['type'] == 4:
-                        # locktime should be checked against the current time
-                        if current_time > locktime:
-                            result['unlocked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
-                        else:
-                            logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
-                            result['locked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
-                else:
-                    logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
+                if output['condition']['data']['condition']['type'] == 1:
+                    # locktime should be checked against the current time
+                    if current_time > locktime:
+                        result['unlocked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
+                    else:
+                        logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
+                        result['locked'].append(output['condition']['data']['condition']['data'].get('unlockhash'))
+                elif output['condition']['data']['condition']['type'] == 4:
+                    # locktime should be checked against the current time
+                    if current_time > locktime:
+                        result['unlocked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
+                    else:
+                        logger.warn("Found transaction output for address {} but it cannot be unlocked yet".format(address))
+                        result['locked'].extend(output['condition']['data']['condition']['data'].get('unlockhashes'))
+
         elif output['condition'].get('type') == 4:
             result['unlocked'].extend(output['condition']['data']['unlockhashes'])
 

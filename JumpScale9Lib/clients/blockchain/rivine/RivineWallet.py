@@ -148,8 +148,6 @@ class RivineWallet:
         unconfirmed_txs = self._get_unconfirmed_transactions(format_inputs=True)
         logger.info('Current chain height is: {}'.format(current_chain_height))
         for address in self.addresses:
-            # if address in self._addresses_info:
-            #     continue
             try:
                 address_info = self._check_address(address=address, log_errors=False)
             except RESTAPIError:
