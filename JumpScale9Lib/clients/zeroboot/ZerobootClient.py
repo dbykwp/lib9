@@ -309,7 +309,7 @@ class Hosts:
         else:
             self._last_index = -1
 
-    def add(self, mac, address, hostname, networkname="lan"):
+    def add(self, mac, address, hostname):
         """Adds a static lease to machine with the specified mac address
 
         :param mac: required mac address
