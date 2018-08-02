@@ -105,10 +105,12 @@ class Network:
     def __init__(self, subnet, sshclient, networkname="lan", leasetime="60m"):
         self.subnet = subnet
         self.sshclient = sshclient
+        self.networkname = networkname
+        
         # get leasetime if present, else set provided
         self.leasetime = self._get_leasetime() or leasetime
         self.hosts = Hosts(self.sshclient, self.subnet, self.leasetime, networkname=networkname)
-        self.networkname = networkname
+        
 
     def _get_leasetime(self):
         _, out, _ = self.sshclient.execute("uci show dhcp.{name}.leasetime".format(name=self.networkname), die=False)
