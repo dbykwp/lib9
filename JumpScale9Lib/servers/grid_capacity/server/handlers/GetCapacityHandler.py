@@ -7,7 +7,13 @@ from ..models import NodeRegistration, NodeNotFoundError
 def GetCapacityHandler(node_id):
     try:
         node = NodeRegistration.get(node_id)
+        if node.farmer.location and node.farmer.location.latitude and node.farmer.location.longitude:
+            node.location = node.farmer.location
     except NodeNotFoundError:
         return jsonify(), 404
 
-    return node.to_json(use_db_field=False), 200, {'Content-type': 'application/json'}
+    output = node.to_mongo().to_dict()
+    output['node_id'] = output.pop('_id')
+    output['farmer_id'] = output.pop('farmer')
+
+    return jsonify(output), 200, {'Content-type': 'application/json'}

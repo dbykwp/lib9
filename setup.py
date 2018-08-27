@@ -15,7 +15,7 @@ def _post_install(libname, libpath):
     # c[libname] = libpath
     j.core.state.configSet('plugins', c)
     j.sal.process.execute(
-        "pip3 install 'git+https://github.com/trezor/python-mnemonic.git'")
+        "pip3 install 'git+https://github.com/spesmilo/electrum.git@3.2.2'")
     j.tools.jsloader.generate()
 
 
@@ -100,7 +100,6 @@ setup(
         'pynacl>=1.1.2',
         'ipcalc>=1.99.0',
         'ed25519>=1.4',
-        'pyghmi==1.0.44',
         'python-jose>=1.3.2',
     ],
     cmdclass={
